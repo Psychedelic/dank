@@ -5,7 +5,7 @@ use ic_cdk_macros::*;
 use serde::*;
 use std::collections::HashMap;
 
-pub struct Ledger(HashMap<Principal, u64>);
+pub struct Ledger(pub HashMap<Principal, u64>);
 
 impl Default for Ledger {
     fn default() -> Self {

@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "dank",
+    "mint",
 ]
 
 [profile.release]
