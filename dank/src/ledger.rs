@@ -1,3 +1,4 @@
+use crate::history::{HistoryBuffer, Transaction, TransactionKind};
 use ic_cdk::export::candid::{CandidType, Nat, Principal};
 use ic_cdk::*;
 use ic_cdk_macros::*;
@@ -65,8 +66,18 @@ fn transfer(args: TransferArguments) -> Result<Nat, TransferError> {
     let recipient = ledger.0.entry(args.to).or_insert(0);
     *recipient = *recipient + args.amount;
 
-    // TODO(qti3e) Implement the history module.
-    Ok(Nat::from(0))
+    let transaction = Transaction {
+        timestamp: api::time(),
+        cycles: args.amount,
+        fee: 0,
+        kind: TransactionKind::Transfer {
+            from: caller(),
+            to: args.to,
+        },
+    };
+
+    let id = storage::get_mut::<HistoryBuffer>().push(transaction);
+    Ok(id)
 }
 
 #[derive(CandidType)]
@@ -88,8 +99,15 @@ fn deposit(account: Option<Principal>) -> Result<Nat, DepositError> {
     let balance = ledger.0.entry(account).or_insert(0);
     *balance += accepted;
 
-    // TODO(qti3e) History module.
-    Ok(Nat::from(0))
+    let transaction = Transaction {
+        timestamp: api::time(),
+        cycles: accepted,
+        fee: 0,
+        kind: TransactionKind::Deposit { to: account },
+    };
+
+    let id = storage::get_mut::<HistoryBuffer>().push(transaction);
+    Ok(id)
 }
 
 #[derive(Deserialize)]
@@ -134,7 +152,23 @@ async fn withdraw(args: WithdrawArguments) -> Result<Nat, WithdrawError> {
     )
     .await
     {
-        Ok(()) => (Ok(Nat::from(0)), api::call::msg_cycles_refunded()),
+        Ok(()) => {
+            let refunded = api::call::msg_cycles_refunded();
+            let cycles = args.amount - refunded;
+            let transaction = Transaction {
+                timestamp: api::time(),
+                cycles,
+                fee: 0,
+                kind: TransactionKind::Withdraw {
+                    from: caller(),
+                    to: args.canister,
+                },
+            };
+
+            let id = storage::get_mut::<HistoryBuffer>().push(transaction);
+
+            (Ok(id), refunded)
+        }
         Err(_) => (Err(WithdrawError::InvalidTokenContract), args.amount),
     };
 

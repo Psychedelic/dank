@@ -1,3 +1,4 @@
+use crate::history::{HistoryBuffer, Transaction};
 use crate::ledger::Ledger;
 use ic_cdk::export::candid::{CandidType, Deserialize, Principal};
 use ic_cdk::*;
@@ -6,13 +7,15 @@ use ic_cdk_macros::*;
 #[derive(CandidType, Deserialize)]
 struct StableStorage {
     ledger: Vec<(Principal, u64)>,
+    history: Vec<Transaction>,
 }
 
 #[pre_upgrade]
 pub fn pre_upgrade() {
     let ledger = storage::get_mut::<Ledger>().archive();
+    let history = storage::get_mut::<HistoryBuffer>().archive();
 
-    let stable = StableStorage { ledger };
+    let stable = StableStorage { ledger, history };
 
     match storage::stable_save((stable,)) {
         Ok(_) => (),
@@ -29,5 +32,6 @@ pub fn pre_upgrade() {
 pub fn post_upgrade() {
     if let Ok((stable,)) = storage::stable_restore::<(StableStorage,)>() {
         storage::get_mut::<Ledger>().load(stable.ledger);
+        storage::get_mut::<HistoryBuffer>().load(stable.history);
     }
 }
