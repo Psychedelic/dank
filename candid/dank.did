@@ -1,0 +1,82 @@
+type TransactionId = nat64;
+
+type WithdrawError = variant {
+    InsufficientBalance;
+    InvalidTokenContract;
+    NotSufficientLiquidity;
+};
+
+type WithdrawResult = variant {
+    Ok : TransactionId;
+    Err: WithdrawError;
+};
+
+type TransferError = variant {
+    InsufficientBalance;
+    AmountTooLarge;
+    CallFailed;
+    Unknown;
+};
+
+type TransferResponse = variant {
+    Ok : TransactionId;
+    Err: TransferError;
+};
+
+type ResultCall = variant {
+    Ok : record { return: blob };
+    Err : text;
+};
+
+type EventDetail = variant {
+    Transfer : record {
+        from : principal;
+        to   : principal;
+    };
+    // DEX events
+    Deposit  : record {
+        to   : principal;
+    };
+    Withdraw : record {
+        from : principal;
+        to   : principal;
+    };
+    CanisterCalled : record {
+        canister : principal;
+        method_name: text;
+    };
+    CanisterCreated : record {
+        canister : principal;
+    };
+    ChargingStationDeployed : record {
+        canister : principal;
+    };
+};
+
+type Event = record {
+    timestamp : nat64;
+    amount    : nat64;
+    fee       : nat64;
+    detail    : EventDetail;
+};
+
+type GetTransactionResult = variant {
+    None;
+    Some : Event;
+};
+
+type EventsConnection = record {
+    data            : vec Event;
+    next_canister_id: opt principal;
+};
+
+service : {
+    balance: (opt principal) -> (amount: nat64) query;
+    deposit: (opt principal) -> (transaction_id : TransactionId);
+    withdraw: (record { canister_id: principal; amount: nat64 }) -> (WithdrawResult);
+    transfer: (record { to: principal; amount: nat64 }) -> (TransferResponse);
+
+    // History
+    get_transaction : (id: TransactionId) -> (GetTransactionResult) query;
+    events : (record { after: opt nat32; limit: nat16 }) -> (EventsConnection) query;
+}

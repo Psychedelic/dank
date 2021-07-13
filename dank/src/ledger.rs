@@ -112,8 +112,8 @@ fn deposit(account: Option<Principal>) -> Result<TransactionId, DepositError> {
 
 #[derive(Deserialize)]
 struct WithdrawArguments {
-    amount: u64,
     canister: Principal,
+    amount: u64,
 }
 
 #[derive(CandidType)]
