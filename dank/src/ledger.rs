@@ -1,5 +1,5 @@
-use crate::history::{HistoryBuffer, Transaction, TransactionKind};
-use ic_cdk::export::candid::{CandidType, Nat, Principal};
+use crate::history::{HistoryBuffer, Transaction, TransactionId, TransactionKind};
+use ic_cdk::export::candid::{CandidType, Principal};
 use ic_cdk::*;
 use ic_cdk_macros::*;
 use serde::*;
@@ -52,7 +52,7 @@ enum TransferError {
 }
 
 #[update]
-fn transfer(args: TransferArguments) -> Result<Nat, TransferError> {
+fn transfer(args: TransferArguments) -> Result<TransactionId, TransferError> {
     let ledger = storage::get_mut::<Ledger>();
 
     let sender_balance = match ledger.0.get_mut(&caller()) {
@@ -86,7 +86,7 @@ enum DepositError {
 }
 
 #[update]
-fn deposit(account: Option<Principal>) -> Result<Nat, DepositError> {
+fn deposit(account: Option<Principal>) -> Result<TransactionId, DepositError> {
     let account = match account {
         Some(account) => account,
         None => caller(),
@@ -124,7 +124,7 @@ enum WithdrawError {
 }
 
 #[update]
-async fn withdraw(args: WithdrawArguments) -> Result<Nat, WithdrawError> {
+async fn withdraw(args: WithdrawArguments) -> Result<TransactionId, WithdrawError> {
     let ledger = storage::get_mut::<Ledger>();
 
     let balance = match ledger.0.get_mut(&caller()) {

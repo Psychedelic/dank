@@ -1,5 +1,7 @@
-use ic_cdk::export::candid::{CandidType, Nat};
+use ic_cdk::export::candid::CandidType;
 use ic_cdk::export::Principal;
+use ic_cdk::*;
+use ic_cdk_macros::*;
 use serde::Deserialize;
 
 pub struct HistoryBuffer {
@@ -26,10 +28,10 @@ impl HistoryBuffer {
     }
 
     #[inline]
-    pub fn push(&mut self, transaction: Transaction) -> Nat {
+    pub fn push(&mut self, transaction: Transaction) -> TransactionId {
         let id = self.transactions.len();
         self.transactions.push(transaction);
-        Nat::from(id)
+        id as TransactionId
     }
 }
 
@@ -68,7 +70,7 @@ pub struct Transaction {
 
 #[derive(Deserialize, CandidType)]
 pub struct EventsArgs {
-    pub from: Option<u32>,
+    pub from: Option<u64>,
     pub limit: u16,
 }
 
@@ -76,4 +78,29 @@ pub struct EventsArgs {
 pub struct EventsConnection<'a> {
     pub data: &'a [Transaction],
     pub next_canister_id: Option<Principal>,
+}
+
+pub type TransactionId = u64;
+
+#[query]
+fn get_transaction(id: TransactionId) -> Option<&'static Transaction> {
+    storage::get::<HistoryBuffer>()
+        .transactions
+        .get(id as usize)
+}
+
+#[query]
+fn events(args: EventsArgs) -> EventsConnection<'static> {
+    let buffer = storage::get::<HistoryBuffer>();
+    let from = args.from.unwrap_or(0) as usize;
+    let end = from + args.limit.min(512) as usize;
+
+    EventsConnection {
+        data: &buffer.transactions[from..end],
+        next_canister_id: if end >= buffer.transactions.len() {
+            None
+        } else {
+            Some(id())
+        },
+    }
 }
