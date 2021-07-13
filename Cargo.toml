@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "dank",
+]
+
+[profile.release]
+lto = true
+opt-level = 'z'

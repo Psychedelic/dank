@@ -1,0 +1,15 @@
+[package]
+name = "dank"
+version = "0.1.0"
+authors = ["Parsa Ghadimi <parsa@fleek.co>"]
+edition = "2018"
+
+[dependencies]
+ic-cdk = "0.3.0"
+ic-cdk-macros = "0.3.0"
+serde = { version="1.0.116", features = ["derive"] }
+serde_bytes = "0.11"
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/lib.rs"
