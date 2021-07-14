@@ -7,6 +7,12 @@
       "candid": "candid/dank.did",
       "wasm": "target/wasm32-unknown-unknown/release/dank-opt.wasm",
       "type": "custom"
+    },
+    "piggy-bank": {
+      "build": "cargo build --target wasm32-unknown-unknown --release --package piggy-bank",
+      "candid": "candid/piggy-bank.did",
+      "wasm": "target/wasm32-unknown-unknown/release/piggy_bank.wasm",
+      "type": "custom"
     }
   },
   "defaults": {

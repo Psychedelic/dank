@@ -1,0 +1,15 @@
+type TransactionId = nat64;
+
+type DepositError = variant {
+    NotSufficientLiquidity;
+};
+
+type DepositResult = variant {
+    Ok : TransactionId;
+    Err: DepositError;
+};
+
+service : {
+    balance: () -> (amount: nat64);
+    perform_deposit: (record { canister: principal; account: opt principal; cycles: nat64 }) -> (DepositResult);
+}
