@@ -23,6 +23,15 @@ type TransferResponse = variant {
     Err: TransferError;
 };
 
+type DepositError = variant {
+    NotSufficientLiquidity;
+};
+
+type DepositResult = variant {
+    Ok : TransactionId;
+    Err: DepositError;
+};
+
 type ResultCall = variant {
     Ok : record { return: blob };
     Err : text;
@@ -71,8 +80,8 @@ type EventsConnection = record {
 };
 
 service : {
-    balance: (opt principal) -> (amount: nat64) query;
-    deposit: (opt principal) -> (transaction_id : TransactionId);
+    balance: (opt principal) -> (amount: nat64);
+    deposit: (opt principal) -> (DepositResult);
     withdraw: (record { canister_id: principal; amount: nat64 }) -> (WithdrawResult);
     transfer: (record { to: principal; amount: nat64 }) -> (TransferResponse);
 
