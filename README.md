@@ -22,4 +22,3 @@ $ myID=$(dfx identity get-principal)
 $ dfx canister call dank balance "(principal \"$myID\")"
 (0)
 ```
-
