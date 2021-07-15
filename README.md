@@ -7,11 +7,11 @@ Dank is an infrastructure layer Open Internet Service on the Internet Computer, 
 ### On the Mainnet
 
 Dank offers it's services on the mainnet of the Internet Computer (IC). Interacting with Dank on the mainnetis not much different than interacting with it locally.
-Dank's principal ID on the mainnet is `gcuwd-2qaaa-aaaad-qakeq-cai`. You have to use this address for your calls. Let's check our
+Dank's principal ID on the mainnet is `aanaa-xaaaa-aaaah-aaeiq-cai`. You have to use this address for your calls. Let's check our
 balance with this ID:
 
 ```bash
-$ dfx canister --network=ic call gcuwd-2qaaa-aaaad-qakeq-cai balance "(null)"
+$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai balance "(null)"
 (0)
 ```
 
