@@ -37,6 +37,11 @@ type ResultCall = variant {
     Err : text;
 };
 
+type ResultCreate = variant {
+    Ok : record { canister_id: principal };
+    Err: text;
+};
+
 type EventDetail = variant {
     Transfer : record {
         from : principal;
@@ -88,4 +93,20 @@ service : {
     // History
     get_transaction : (id: TransactionId) -> (GetTransactionResult) query;
     events : (record { after: opt nat32; limit: nat16 }) -> (EventsConnection) query;
+
+    // Proxy
+    wallet_call: (record {
+        canister: principal;
+        method_name: text;
+        args: blob;
+        cycles: nat64;
+    }) -> (ResultCall);
+
+    // Managing canister
+    wallet_create_canister: (record {
+        cycles: nat64;
+        controller: opt principal;  // If omitted, set the controller to the caller.
+    }) -> (ResultCreate);
+
+    whoami : () -> principal;
 }
