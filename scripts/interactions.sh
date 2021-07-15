@@ -41,11 +41,23 @@ dankBalance=$(dfx canister call dank balance "(null)")
 echo Piggy Bank\'s new balance: $piggyBalance
 echo Dank\'s new balance: $dankBalance
 
-# Step 5. We transfer some of the cycles back to piggy-bank using the transfer method from Dank
+# Step 5. We withdraw some cycles from Dank.
+echo
+echo == Withdrawing 2000 cycles from Dank to Piggy Bank
+echo
+piggyID=$(dfx canister id piggy-bank)
+dfx canister call dank withdraw "(record { canister_id= principal \"$piggyID\"; amount= 2000})"
+
+echo
+piggyBalance=$(dfx canister call piggy-bank balance)
+dankBalance=$(dfx canister call dank balance "(null)")
+echo Piggy Bank\'s new balance: $piggyBalance
+echo Dank\'s new balance: $dankBalance
+
+# Step 6. We transfer some of the cycles back to piggy-bank using the transfer method from Dank
 echo
 echo == Transfering 1000 cycles back to Piggy Bank
 echo
-piggyID=$(dfx canister id piggy-bank)
 dfx canister call dank transfer "(record { to= principal \"$piggyID\"; amount= 1000 })"
 
 echo
@@ -54,20 +66,6 @@ dankBalance=$(dfx canister call dank balance "(null)")
 echo Piggy Bank\'s new balance: $piggyBalance
 echo Dank\'s new balance: $dankBalance
 
-# Step 6. We withdraw some cycles from Dank.
-echo
-echo == Withdrawing 2000 cycles from Dank
-echo
-myID=$(dfx identity get-principal)
-dfx canister call dank withdraw "(record { canister_id= principal \"$myID\"; amount= 2000})"
-
-echo
-piggyBalance=$(dfx canister call piggy-bank balance)
-dankBalance=$(dfx canister call dank balance "(null)")
-myBalance=$(dfx canister call dank balance "(\"$myID\")")
-echo Piggy Bank\'s new balance: $piggyBalance
-echo Dank\'s new balance: $dankBalance
-echo My new balance: $myBalance
 
 # Now that we're done let's stop the service.
 echo
