@@ -85,6 +85,8 @@ type EventsConnection = record {
 };
 
 service : {
+    name: () -> (text);
+
     balance: (opt principal) -> (amount: nat64);
     deposit: (opt principal) -> (DepositResult);
     withdraw: (record { canister_id: principal; amount: nat64 }) -> (WithdrawResult);
