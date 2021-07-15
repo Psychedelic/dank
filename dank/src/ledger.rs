@@ -137,7 +137,7 @@ fn deposit(account: Option<Principal>) -> Result<TransactionId, DepositError> {
 
 #[derive(Deserialize)]
 struct WithdrawArguments {
-    canister: Principal,
+    canister_id: Principal,
     amount: u64,
 }
 
@@ -163,7 +163,7 @@ async fn withdraw(args: WithdrawArguments) -> Result<TransactionId, WithdrawErro
     }
 
     let deposit_cycles_arg = DepositCyclesArg {
-        canister_id: args.canister,
+        canister_id: args.canister_id,
     };
 
     let (result, refunded) = match api::call::call_with_payment(
@@ -183,7 +183,7 @@ async fn withdraw(args: WithdrawArguments) -> Result<TransactionId, WithdrawErro
                 fee: 0,
                 kind: TransactionKind::Withdraw {
                     from: user.clone(),
-                    to: args.canister,
+                    to: args.canister_id,
                 },
             };
 
