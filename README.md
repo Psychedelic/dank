@@ -6,7 +6,7 @@ Dank is an infrastructure layer Open Internet Service on the Internet Computer, 
 
 ### On the Mainnet
 
-Dank offers it's services on the mainnet of the Internet Computer (IC). To interact with Dank on the mainnet, not much is different than interacting with it locally.
+Dank offers it's services on the mainnet of the Internet Computer (IC). Interacting with Dank on the mainnetis not much different than interacting with it locally.
 Dank's principal ID on the mainnet is `gcuwd-2qaaa-aaaad-qakeq-cai`. You have to use this address for your calls. Let's check our
 balance with this ID:
 
@@ -15,14 +15,14 @@ $ dfx canister --network=ic call gcuwd-2qaaa-aaaad-qakeq-cai balance "(null)"
 (0)
 ```
 
-There are two differences between this command that calls the mainnet and the command that calls Dank locally:
+There are two differences between commands that call Dank and commands that call Dank locally:
 
-1. When we call Dank locally, the command doesn't have the `network` option.
-2. When we call Dank locally, we don't have to pass the principal ID, we can just use the name `dank`.
+1. When we call Dank locally, the command doesn't have the `--network=ic` option.
+2. When we call Dank locally, there is no need to pass the principal ID, we can just use the name `dank`.
 
-If you keep these differences in my mind, you can interact with Dank on the mainnet.
+If you keep these differences in mind, you can interact with Dank on the mainnet the same way you interact with it locally.
 
-### Deploying locally
+### Interacting with Dank locally
 
 To interact with Dank and use it's methods locally, you should first clone this repository.
 After that, you should start the dfx service and deploy the canisters on the IC:
