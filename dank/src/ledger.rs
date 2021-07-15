@@ -3,13 +3,14 @@ use ic_cdk::export::candid::{CandidType, Principal};
 use ic_cdk::*;
 use ic_cdk_macros::*;
 use serde::*;
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
 pub struct Ledger(HashMap<Principal, u64>);
 
 impl Default for Ledger {
     fn default() -> Self {
-        Self(HashMap::with_capacity(25_000))
+        Self(HashMap::new())
     }
 }
 
@@ -23,17 +24,51 @@ impl Ledger {
 
     pub fn load(&mut self, archive: Vec<(Principal, u64)>) {
         self.0 = archive.into_iter().collect();
+        self.0.reserve(25_000 - self.0.len());
+    }
+
+    #[inline]
+    pub fn balance(&self, account: &Principal) -> u64 {
+        match self.0.get(account) {
+            Some(balance) => *balance,
+            None => 0,
+        }
+    }
+
+    #[inline]
+    pub fn deposit(&mut self, account: Principal, amount: u64) {
+        match self.0.entry(account) {
+            Entry::Occupied(mut e) => {
+                e.insert(*e.get() + amount);
+            }
+            Entry::Vacant(e) => {
+                e.insert(amount);
+            }
+        }
+    }
+
+    #[inline]
+    pub fn withdraw(&mut self, account: &Principal, amount: u64) -> Result<(), ()> {
+        let balance = match self.0.get_mut(&account) {
+            Some(balance) if *balance >= amount => {
+                *balance -= amount;
+                *balance
+            }
+            _ => return Err(()),
+        };
+
+        if balance == 0 {
+            self.0.remove(&account);
+        }
+
+        Ok(())
     }
 }
 
 #[update]
 pub fn balance(account: Option<Principal>) -> u64 {
     let ledger = storage::get::<Ledger>();
-    let account = match account {
-        Some(account) => account,
-        None => caller(),
-    };
-    ledger.0.get(&account).cloned().unwrap_or(0)
+    ledger.balance(&account.unwrap_or_else(|| caller()))
 }
 
 #[derive(Deserialize)]
@@ -53,25 +88,20 @@ enum TransferError {
 
 #[update]
 fn transfer(args: TransferArguments) -> Result<TransactionId, TransferError> {
+    let user = caller();
     let ledger = storage::get_mut::<Ledger>();
 
-    let sender_balance = match ledger.0.get_mut(&caller()) {
-        None => return Err(TransferError::InsufficientBalance),
-        Some(balance) if *balance < args.amount => return Err(TransferError::InsufficientBalance),
-        Some(balance) => balance,
-    };
-
-    *sender_balance = *sender_balance - args.amount;
-
-    let recipient = ledger.0.entry(args.to).or_insert(0);
-    *recipient = *recipient + args.amount;
+    ledger
+        .withdraw(&user, args.amount)
+        .map_err(|_| TransferError::InsufficientBalance)?;
+    ledger.deposit(args.to, args.amount);
 
     let transaction = Transaction {
         timestamp: api::time(),
         cycles: args.amount,
         fee: 0,
         kind: TransactionKind::Transfer {
-            from: caller(),
+            from: user,
             to: args.to,
         },
     };
@@ -87,17 +117,12 @@ enum DepositError {
 
 #[update]
 fn deposit(account: Option<Principal>) -> Result<TransactionId, DepositError> {
-    let account = match account {
-        Some(account) => account,
-        None => caller(),
-    };
-
+    let account = account.unwrap_or_else(|| caller());
     let available = api::call::msg_cycles_available();
     let accepted = api::call::msg_cycles_accept(available);
 
     let ledger = storage::get_mut::<Ledger>();
-    let balance = ledger.0.entry(account).or_insert(0);
-    *balance += accepted;
+    ledger.deposit(account.clone(), accepted);
 
     let transaction = Transaction {
         timestamp: api::time(),
@@ -125,15 +150,12 @@ enum WithdrawError {
 
 #[update]
 async fn withdraw(args: WithdrawArguments) -> Result<TransactionId, WithdrawError> {
+    let user = caller();
     let ledger = storage::get_mut::<Ledger>();
 
-    let balance = match ledger.0.get_mut(&caller()) {
-        None => return Err(WithdrawError::InsufficientBalance),
-        Some(balance) if *balance < args.amount => return Err(WithdrawError::InsufficientBalance),
-        Some(balance) => balance,
-    };
-
-    *balance -= args.amount;
+    ledger
+        .withdraw(&user, args.amount)
+        .map_err(|_| WithdrawError::InsufficientBalance)?;
 
     #[derive(CandidType)]
     struct DepositCyclesArg {
@@ -144,7 +166,7 @@ async fn withdraw(args: WithdrawArguments) -> Result<TransactionId, WithdrawErro
         canister_id: args.canister,
     };
 
-    let (result, refund) = match api::call::call_with_payment(
+    let (result, refunded) = match api::call::call_with_payment(
         Principal::management_canister(),
         "deposit_cycles",
         (deposit_cycles_arg,),
@@ -160,7 +182,7 @@ async fn withdraw(args: WithdrawArguments) -> Result<TransactionId, WithdrawErro
                 cycles,
                 fee: 0,
                 kind: TransactionKind::Withdraw {
-                    from: caller(),
+                    from: user.clone(),
                     to: args.canister,
                 },
             };
@@ -172,10 +194,55 @@ async fn withdraw(args: WithdrawArguments) -> Result<TransactionId, WithdrawErro
         Err(_) => (Err(WithdrawError::InvalidTokenContract), args.amount),
     };
 
-    if refund > 0 {
-        let balance = ledger.0.entry(caller()).or_insert(0);
-        *balance += refund;
+    if refunded > 0 {
+        ledger.deposit(user, refunded);
     }
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Ledger;
+    use ic_cdk::export::candid::Principal;
+
+    fn alice() -> Principal {
+        Principal::from_text("fterm-bydaq-aaaaa-aaaaa-c").unwrap()
+    }
+
+    fn bob() -> Principal {
+        Principal::from_text("ai7t5-aibaq-aaaaa-aaaaa-c").unwrap()
+    }
+
+    fn john() -> Principal {
+        Principal::from_text("hozae-racaq-aaaaa-aaaaa-c").unwrap()
+    }
+
+    #[test]
+    fn balance() {
+        let mut ledger = Ledger::default();
+        assert_eq!(ledger.balance(&alice()), 0);
+        assert_eq!(ledger.balance(&bob()), 0);
+        assert_eq!(ledger.balance(&john()), 0);
+
+        // Deposit should work.
+        ledger.deposit(alice(), 1000);
+        assert_eq!(ledger.balance(&alice()), 1000);
+        assert_eq!(ledger.balance(&bob()), 0);
+        assert_eq!(ledger.balance(&john()), 0);
+
+        assert!(ledger.withdraw(&alice(), 100).is_ok());
+        assert_eq!(ledger.balance(&alice()), 900);
+        assert_eq!(ledger.balance(&bob()), 0);
+        assert_eq!(ledger.balance(&john()), 0);
+
+        assert!(ledger.withdraw(&alice(), 1000).is_err());
+        assert_eq!(ledger.balance(&alice()), 900);
+
+        ledger.deposit(alice(), 100);
+        assert!(ledger.withdraw(&alice(), 1000).is_ok());
+        assert_eq!(ledger.balance(&alice()), 0);
+        assert_eq!(ledger.balance(&bob()), 0);
+        assert_eq!(ledger.balance(&john()), 0);
+    }
 }
