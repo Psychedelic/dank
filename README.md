@@ -5,7 +5,7 @@ Dank is an infrastructure layer Open Internet Service on the Internet Computer, 
 ## Interacting with Dank
 
 To interact with Dank and use it's methods, you should first clone this repository.
-After that, you should start dfx and deploy our canisters on the IC:
+After that, you should start the dfx service and deploy the canisters on the IC:
 
 ```bash
 git clone git@github.com:Psychedelic/dank.git
@@ -14,7 +14,10 @@ dfx start --background --clean
 dfx deploy
 ```
 
-Now that the canister is deployed on the IC, we can call it's methods. Some methods like `withdraw`, need other canisters.
+NOTE: All of the commands that are used here are put together in a shell script. You can run that shell script locally and
+check the functionality of Dank without executing each command seperately. The script's location is [scripts/interactions.sh](https://github.com/Psychedelic/dank/blob/nima/scripts/interactions.sh).
+
+Now that the canisters are deployed on the IC, we can call their methods. Some methods like `withdraw`, need other canisters.
 For that reason, we have created the `piggy-bank` canister. This canister will be used to demonstrate how any other canister on
 the network should interact with Dank. For now, let's just check our balance:
 
