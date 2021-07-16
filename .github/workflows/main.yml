@@ -23,6 +23,7 @@ jobs:
 
       - name: Target clean cache
         id: target-clean-cache
+        uses: actions/cache@v2
         with:
           path: .github/target_clean
           key: cache-${{ runner.os }}-target-clean-cache-${{ hashFiles('.github/target_clean') }}
