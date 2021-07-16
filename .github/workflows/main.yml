@@ -33,4 +33,4 @@ jobs:
         run: cargo clean
 
       - name: Test runner
-        run: cargo test --no-run
+        run: cargo test
