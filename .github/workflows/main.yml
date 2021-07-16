@@ -21,6 +21,12 @@ jobs:
       - name: Rust toolchain
         run: .github/scripts/rust-toolchain.sh
 
+      - name: Target clean cache
+        id: target-clean-cache
+        with:
+          path: .github/target_clean
+          key: cache-${{ runner.os }}-target-clean-cache-${{ hashFiles('.github/target_clean') }}
+
       - name: Target dir cache
         id: target-dir-cache
         uses: actions/cache@v2
@@ -29,7 +35,7 @@ jobs:
           key: cache-${{ runner.os }}-target-dir-cache-${{ hashFiles('cargo.lock') }}
 
       - name: Target dir clean
-        if: steps.target-dir-cache.outputs.cache-hit != 'true' || ${{ secrets.TARGET_CLEAN_FORCE }} == 1
+        if: steps.target-dir-cache.outputs.cache-hit != 'true' || steps.target-clean-cache.outputs.cache-hit != 'true'
         run: cargo clean
 
       - name: Test runner
