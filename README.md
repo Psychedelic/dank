@@ -15,12 +15,50 @@ $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai balance "(null)"
 (0)
 ```
 
+The reason that we passed `null` as a parameter to the balance method is that we want to check our own balance. If we wanted to check
+another account's balance, we would've added a principal ID there. In that scenario, the command would have changes to this
+(the principal ID used in the command is not real, just an example):
+
+```bash
+$ principalID="q6d6b-7t7pe-wdoiw-wjwn7-smnub-aaflq-cjd6i-luoec-gqtg3-62hiy-7qe"
+$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai balance "(principal \"$principalID\")"
+(0)
+```
+
 There are two differences between commands that call Dank and commands that call Dank locally:
 
 1. When we call Dank locally, the command doesn't have the `--network=ic` option.
 2. When we call Dank locally, there is no need to pass the principal ID, we can just use the name `dank`.
 
 If you keep these differences in mind, you can interact with Dank on the mainnet the same way you interact with it locally.
+
+Withdrawing cycles (You should change the amount):
+
+```bash
+$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai withdraw "(record { canister_id= principal \"some-canister's-principal-id\"; amount= 2000})"
+(variant { Ok = 1 })
+```
+
+Transferring cycles to another Dank account (You should change the amount):
+
+```bash
+$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai transfer "(record { to= principal \"some-account's-principal-id\"; amount= 1000 })"
+(variant { Ok = 2 })
+```
+
+Depositing cycles to your Dank account (You should change AMOUNT to what you want):
+
+```bash
+$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai deposit "(null)" --with-cycles AMOUNT
+(variant { Ok = 3 })
+```
+
+NOTE: You can deposit cycles to another Dank account from your identity with the same `deposit` method that we used to deposit cycles to our own Dank account. For that situation, you should change `"(null)"` to a principal ID:
+
+```bash
+$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai deposit "(principal \"Some-Principal-ID\")" --with-cycles AMOUNT
+(variant { Ok = 4 })
+```
 
 ### Interacting with Dank locally
 
@@ -81,6 +119,15 @@ Created identity: "steve".
 $ steveID=$(dfx --identity steve identity get-principal)
 $ dfx canister call dank transfer "(record { to= principal \"$steveID\"; amount= 1000 })"
 (variant { Ok = 2 })
+```
+
+You might ask how does dank know from what account I'm transferring cycles? Well, that's implied in your command. If we don't add
+the `--identity` flag, DFX uses your default identity and because of that, Dank also uses your default account. If you add that flag
+and force DFX to use another identity, Dank also uses the account associated with that identity. For example if we wanted to make a
+transfer from Steve's account, we would have had to add `--identity steve` after `dfx`:
+
+```bash
+dfx --identity steve canister call dank transfer "(record { to= principal \"some-principal-id\"; amount= 1000 })"
 ```
 
 Now if we check our balance we see that it's decreased by one thousand cycles, and if we check Steve's balance we see that it is one thousand cycles:
