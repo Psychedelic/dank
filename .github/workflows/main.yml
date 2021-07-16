@@ -1,0 +1,28 @@
+name: PR Test runner
+
+on:
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/psychedelic/dank-explorer-ci:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.PRIVATE_ACCESS_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Rust toolchain
+        run: .github/scripts/rust-toolchain.sh
+
+      - name: DFX Serve
+        run: .github/scripts/dank-canister-serve.sh
+
+      - name: Test runner
+        run: cargo test
