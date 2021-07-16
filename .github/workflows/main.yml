@@ -29,7 +29,7 @@ jobs:
           key: cache-${{ runner.os }}-target-dir-cache-${{ hashFiles('cargo.lock') }}
 
       - name: Target dir clean
-        if: steps.target-dir-cache.outputs.cache-hit != 'true'
+        if: steps.target-dir-cache.outputs.cache-hit != 'true' || ${{ secrets.TARGET_CLEAN_FORCE }} == 1
         run: cargo clean
 
       - name: Test runner
