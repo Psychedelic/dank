@@ -21,8 +21,5 @@ jobs:
       - name: Rust toolchain
         run: .github/scripts/rust-toolchain.sh
 
-      - name: DFX Serve
-        run: .github/scripts/dank-canister-serve.sh
-
       - name: Test runner
         run: cargo test
