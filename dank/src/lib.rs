@@ -16,3 +16,14 @@ fn name() -> String {
 fn whoami() -> Principal {
     caller()
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn healthcheck() {
+        assert_eq!(name(), "Dank");
+    }
+}
