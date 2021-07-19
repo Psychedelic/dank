@@ -1,4 +1,4 @@
-![](https://storageapi.fleek.co/fleek-team-bucket/Dank/Banner.png)
+![Dank Logo](https://storageapi.fleek.co/fleek-team-bucket/Dank/Banner.png)
 
 # Dank
 
@@ -8,12 +8,13 @@ Dank is an infrastructure layer Open Internet Service on the Internet Computer, 
 
 ### On the Mainnet
 
-Dank offers it's services on the mainnet of the Internet Computer (IC). Interacting with Dank on the mainnetis not much different than interacting with it locally.
-Dank's principal ID on the mainnet is `aanaa-xaaaa-aaaah-aaeiq-cai`. You have to use this address for your calls. Let's check our
-balance with this ID:
+Dank offers it's services on the mainnet of the Internet Computer (IC). Interacting with Dank on the mainnet is not much different than interacting with it locally.
+Dank's principal ID on the mainnet is `aanaa-xaaaa-aaaah-aaeiq-cai`. You have to use either this address for your calls or just simply use `dank`. Let's check our balance with this ID:
 
 ```bash
 $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai balance "(null)"
+(0)
+$ dfx canister --network=ic call dank balance "(null)"
 (0)
 ```
 
@@ -27,28 +28,24 @@ $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai balance "(principal
 (0)
 ```
 
-There are two differences between commands that call Dank and commands that call Dank locally:
+There is one difference between interacting with Dank locally and interacting with Dank on the mainnet. That difference is that
+when you are trying to call a method on the mainnet, you have to add the `--network=ic` flag. If you keep this one difference in mind, you can interact with Dank on the mainnet the same way you interact with it locally.
 
-1. When we call Dank locally, the command doesn't have the `--network=ic` option.
-2. When we call Dank locally, there is no need to pass the principal ID, we can just use the name `dank`.
-
-If you keep these differences in mind, you can interact with Dank on the mainnet the same way you interact with it locally.
-
-Withdrawing cycles (You should change the amount):
+- Withdrawing cycles (You should change the amount):
 
 ```bash
 $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai withdraw "(record { canister_id= principal \"some-canister's-principal-id\"; amount= 2000})"
 (variant { Ok = 1 })
 ```
 
-Transferring cycles to another Dank account (You should change the amount):
+- Transferring cycles to another Dank account (You should change the amount):
 
 ```bash
 $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai transfer "(record { to= principal \"some-account's-principal-id\"; amount= 1000 })"
 (variant { Ok = 2 })
 ```
 
-Depositing cycles to your Dank account (You should change AMOUNT to what you want):
+- Depositing cycles to your Dank account (You should change the amount):
 
 ```bash
 $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai deposit "(null)" --with-cycles AMOUNT
