@@ -82,7 +82,7 @@ pub struct EventsConnection<'a> {
 
 pub type TransactionId = u64;
 
-#[query]
+#[update]
 fn get_transaction(id: TransactionId) -> Option<&'static Transaction> {
     storage::get::<HistoryBuffer>()
         .transactions

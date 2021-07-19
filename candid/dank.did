@@ -69,9 +69,9 @@ type EventDetail = variant {
 
 type Event = record {
     timestamp : nat64;
-    amount    : nat64;
+    cycles    : nat64;
     fee       : nat64;
-    detail    : EventDetail;
+    kind      : EventDetail;
 };
 
 type GetTransactionResult = variant {
@@ -93,7 +93,7 @@ service : {
     transfer: (record { to: principal; amount: nat64 }) -> (TransferResponse);
 
     // History
-    get_transaction : (id: TransactionId) -> (GetTransactionResult) query;
+    get_transaction : (id: TransactionId) -> (GetTransactionResult);
     events : (record { after: opt nat32; limit: nat16 }) -> (EventsConnection) query;
 
     // Proxy

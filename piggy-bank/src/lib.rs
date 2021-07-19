@@ -34,3 +34,8 @@ async fn perform_deposit(args: PerformDepositArgs) -> Result<u64, DepositError> 
 fn balance() -> u64 {
     api::canister_balance()
 }
+
+#[update]
+fn get_available_cycles() -> u64 {
+  api::call::msg_cycles_available()
+}
