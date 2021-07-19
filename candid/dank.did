@@ -94,7 +94,7 @@ service : {
 
     // History
     get_transaction : (id: TransactionId) -> (opt Event);
-    events : (record { after: opt nat32; limit: nat16 }) -> (EventsConnection) query;
+    events : (record { from: opt nat64; limit: nat16 }) -> (EventsConnection) query;
 
     // Proxy
     wallet_call: (record {
