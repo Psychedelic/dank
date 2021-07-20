@@ -30,6 +30,16 @@ impl HistoryBuffer {
 
     #[inline]
     pub fn push(&mut self, transaction: Transaction) -> TransactionId {
+        if transaction.cycles == 0 {
+            if let TransactionKind::CanisterCalled { .. } = transaction.kind {
+                // In case it is a call to another canister, just return zero, this number
+                // is not returned from the method, so it should be fine.
+                return 0;
+            }
+
+            trap("Transaction is expected to have a non-zero amount.")
+        }
+
         StatsData::increment(match &transaction.kind {
             TransactionKind::Transfer { .. } => CountTarget::Transfer,
             TransactionKind::Mint { .. } => CountTarget::Mint,
