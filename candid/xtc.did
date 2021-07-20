@@ -98,6 +98,11 @@ type Stats = record {
     canisters_created_count: nat64;
 };
 
+type ResultSend = variant {
+    Ok : null;
+    Err: text;
+};
+
 service : {
     // Return all of the meta data of a token.
     meta : () -> (TokenMetaData) query;
