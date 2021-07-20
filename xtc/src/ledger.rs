@@ -1,5 +1,6 @@
 use crate::history::{HistoryBuffer, Transaction, TransactionId, TransactionKind};
 use crate::management::IsShutDown;
+use crate::stats::StatsData;
 use ic_cdk::export::candid::{CandidType, Principal};
 use ic_cdk::*;
 use ic_cdk_macros::*;
@@ -38,6 +39,7 @@ impl Ledger {
 
     #[inline]
     pub fn deposit(&mut self, account: Principal, amount: u64) {
+        StatsData::deposit(amount);
         match self.0.entry(account) {
             Entry::Occupied(mut e) => {
                 e.insert(*e.get() + amount);
@@ -61,6 +63,8 @@ impl Ledger {
         if balance == 0 {
             self.0.remove(&account);
         }
+
+        StatsData::withdraw(amount);
 
         Ok(())
     }

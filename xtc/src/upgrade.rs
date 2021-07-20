@@ -1,6 +1,7 @@
 use crate::history::{HistoryBuffer, Transaction};
 use crate::ledger::Ledger;
 use crate::management;
+use crate::stats::StatsData;
 use ic_cdk::export::candid::{CandidType, Deserialize, Principal};
 use ic_cdk::*;
 use ic_cdk_macros::*;
@@ -10,6 +11,7 @@ struct StableStorage {
     ledger: Vec<(Principal, u64)>,
     history: Vec<Transaction>,
     controller: Principal,
+    stats: StatsData,
 }
 
 #[pre_upgrade]
@@ -22,6 +24,7 @@ pub fn pre_upgrade() {
         ledger,
         history,
         controller,
+        stats: StatsData::get(),
     };
 
     match storage::stable_save((stable,)) {
@@ -41,5 +44,6 @@ pub fn post_upgrade() {
         storage::get_mut::<Ledger>().load(stable.ledger);
         storage::get_mut::<HistoryBuffer>().load(stable.history);
         management::Controller::load(stable.controller);
+        StatsData::load(stable.stats);
     }
 }

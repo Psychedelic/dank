@@ -1,3 +1,4 @@
+use crate::stats::{CountTarget, StatsData};
 use ic_cdk::export::candid::CandidType;
 use ic_cdk::export::Principal;
 use ic_cdk::*;
@@ -29,9 +30,23 @@ impl HistoryBuffer {
 
     #[inline]
     pub fn push(&mut self, transaction: Transaction) -> TransactionId {
+        StatsData::increment(match &transaction.kind {
+            TransactionKind::Transfer { .. } => CountTarget::Transfer,
+            TransactionKind::Deposit { .. } => CountTarget::Deposit,
+            TransactionKind::Withdraw { .. } => CountTarget::Withdraw,
+            TransactionKind::CanisterCalled { .. } => CountTarget::ProxyCall,
+            TransactionKind::CanisterCreated { .. } => CountTarget::CanisterCreated,
+            TransactionKind::ChargingStationDeployed { .. } => unreachable!(),
+        });
+
         let id = self.transactions.len();
         self.transactions.push(transaction);
         id as TransactionId
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.transactions.len()
     }
 }
 

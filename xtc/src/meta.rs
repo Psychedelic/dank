@@ -1,5 +1,4 @@
 use ic_cdk::export::candid::CandidType;
-use ic_cdk::*;
 use ic_cdk_macros::*;
 
 #[derive(CandidType)]

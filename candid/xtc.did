@@ -86,8 +86,20 @@ type TokenMetaData = record {
     features: vec text;
 };
 
+type Stats = record {
+    supply: nat;
+    history_events: nat64;
+    balance: nat64;
+    // Usage statistics
+    transfers_count: nat64;
+    deposits_count: nat64;
+    withdraw_count: nat64;
+    proxy_calls_count: nat64;
+    canisters_created_count: nat64;
+};
+
 service : {
-    name : () -> text query;
+    name : () -> (text) query;
 
     // Return all of the meta data of a token.
     meta : () -> (TokenMetaData) query;
@@ -120,4 +132,7 @@ service : {
 
     // Management
     halt : () -> ();
+
+    // Usage statistics
+    stats : () -> (Stats) query;
 }
