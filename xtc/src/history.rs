@@ -32,8 +32,8 @@ impl HistoryBuffer {
     pub fn push(&mut self, transaction: Transaction) -> TransactionId {
         StatsData::increment(match &transaction.kind {
             TransactionKind::Transfer { .. } => CountTarget::Transfer,
-            TransactionKind::Deposit { .. } => CountTarget::Deposit,
-            TransactionKind::Withdraw { .. } => CountTarget::Withdraw,
+            TransactionKind::Mint { .. } => CountTarget::Mint,
+            TransactionKind::Burn { .. } => CountTarget::Burn,
             TransactionKind::CanisterCalled { .. } => CountTarget::ProxyCall,
             TransactionKind::CanisterCreated { .. } => CountTarget::CanisterCreated,
             TransactionKind::ChargingStationDeployed { .. } => unreachable!(),
@@ -56,10 +56,10 @@ pub enum TransactionKind {
         from: Principal,
         to: Principal,
     },
-    Deposit {
+    Mint {
         to: Principal,
     },
-    Withdraw {
+    Burn {
         from: Principal,
         to: Principal,
     },

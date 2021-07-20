@@ -117,12 +117,12 @@ fn transfer(args: TransferArguments) -> Result<TransactionId, TransferError> {
 }
 
 #[derive(CandidType)]
-enum DepositError {
+enum MintError {
     NotSufficientLiquidity,
 }
 
 #[update]
-fn deposit(account: Option<Principal>) -> Result<TransactionId, DepositError> {
+fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
     IsShutDown::guard();
     let account = account.unwrap_or_else(|| caller());
     let available = api::call::msg_cycles_available();
@@ -135,7 +135,7 @@ fn deposit(account: Option<Principal>) -> Result<TransactionId, DepositError> {
         timestamp: api::time(),
         cycles: accepted,
         fee: 0,
-        kind: TransactionKind::Deposit { to: account },
+        kind: TransactionKind::Mint { to: account },
     };
 
     let id = storage::get_mut::<HistoryBuffer>().push(transaction);
@@ -143,27 +143,27 @@ fn deposit(account: Option<Principal>) -> Result<TransactionId, DepositError> {
 }
 
 #[derive(Deserialize)]
-struct WithdrawArguments {
+struct BurnArguments {
     canister_id: Principal,
     amount: u64,
 }
 
 #[derive(CandidType)]
-enum WithdrawError {
+enum BurnError {
     InsufficientBalance,
     InvalidTokenContract,
     NotSufficientLiquidity,
 }
 
 #[update]
-async fn withdraw(args: WithdrawArguments) -> Result<TransactionId, WithdrawError> {
+async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
     IsShutDown::guard();
     let user = caller();
     let ledger = storage::get_mut::<Ledger>();
 
     ledger
         .withdraw(&user, args.amount)
-        .map_err(|_| WithdrawError::InsufficientBalance)?;
+        .map_err(|_| BurnError::InsufficientBalance)?;
 
     #[derive(CandidType)]
     struct DepositCyclesArg {
@@ -189,7 +189,7 @@ async fn withdraw(args: WithdrawArguments) -> Result<TransactionId, WithdrawErro
                 timestamp: api::time(),
                 cycles,
                 fee: 0,
-                kind: TransactionKind::Withdraw {
+                kind: TransactionKind::Burn {
                     from: user.clone(),
                     to: args.canister_id,
                 },
@@ -199,7 +199,7 @@ async fn withdraw(args: WithdrawArguments) -> Result<TransactionId, WithdrawErro
 
             (Ok(id), refunded)
         }
-        Err(_) => (Err(WithdrawError::InvalidTokenContract), args.amount),
+        Err(_) => (Err(BurnError::InvalidTokenContract), args.amount),
     };
 
     if refunded > 0 {

@@ -1,14 +1,14 @@
 type TransactionId = nat64;
 
-type WithdrawError = variant {
+type BurnError = variant {
     InsufficientBalance;
     InvalidTokenContract;
     NotSufficientLiquidity;
 };
 
-type WithdrawResult = variant {
+type BurnResult = variant {
     Ok : TransactionId;
-    Err: WithdrawError;
+    Err: BurnError;
 };
 
 type TransferError = variant {
@@ -23,13 +23,13 @@ type TransferResponse = variant {
     Err: TransferError;
 };
 
-type DepositError = variant {
+type MintError = variant {
     NotSufficientLiquidity;
 };
 
-type DepositResult = variant {
+type MintResult = variant {
     Ok : TransactionId;
-    Err: DepositError;
+    Err: MintError;
 };
 
 type ResultCall = variant {
@@ -37,7 +37,7 @@ type ResultCall = variant {
     Err : text;
 };
 
-type ResultCreate = variant {
+type CreateResult = variant {
     Ok : record { canister_id: principal };
     Err: text;
 };
@@ -48,10 +48,10 @@ type EventDetail = variant {
         to   : principal;
     };
     // DEX events
-    Deposit  : record {
+    Mint     : record {
         to   : principal;
     };
-    Withdraw : record {
+    Burn     : record {
         from : principal;
         to   : principal;
     };
@@ -92,8 +92,8 @@ type Stats = record {
     balance: nat64;
     // Usage statistics
     transfers_count: nat64;
-    deposits_count: nat64;
-    withdraw_count: nat64;
+    mints_count: nat64;
+    burns_count: nat64;
     proxy_calls_count: nat64;
     canisters_created_count: nat64;
 };
@@ -108,8 +108,8 @@ service : {
     meta_certified : () -> (TokenMetaData);
 
     balance: (opt principal) -> (amount: nat64);
-    deposit: (opt principal) -> (DepositResult);
-    withdraw: (record { canister_id: principal; amount: nat64 }) -> (WithdrawResult);
+    mint: (opt principal) -> (MintResult);
+    burn: (record { canister_id: principal; amount: nat64 }) -> (BurnResult);
     transfer: (record { to: principal; amount: nat64 }) -> (TransferResponse);
 
     // History
@@ -128,7 +128,7 @@ service : {
     wallet_create_canister: (record {
         cycles: nat64;
         controller: opt principal;  // If omitted, set the controller to the caller.
-    }) -> (ResultCreate);
+    }) -> (CreateResult);
 
     // Management
     halt : () -> ();

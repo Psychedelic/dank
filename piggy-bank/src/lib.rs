@@ -4,27 +4,25 @@ use ic_cdk_macros::*;
 use serde::*;
 
 #[derive(Deserialize)]
-struct PerformDepositArgs {
+struct PerformMintArgs {
     canister: Principal,
     account: Option<Principal>,
     cycles: u64,
 }
 
 #[derive(CandidType, Deserialize)]
-enum DepositError {
+enum MintError {
     NotSufficientLiquidity,
 }
 
 #[update]
-async fn perform_deposit(args: PerformDepositArgs) -> Result<u64, DepositError> {
+async fn perform_mint(args: PerformMintArgs) -> Result<u64, MintError> {
     let account = match args.account {
         Some(account) => account,
         None => caller(),
     };
 
-    match api::call::call_with_payment(args.canister, "deposit", (Some(account),), args.cycles)
-        .await
-    {
+    match api::call::call_with_payment(args.canister, "mint", (Some(account),), args.cycles).await {
         Ok((res,)) => res,
         Err(e) => trap(&format!("Call failed with code={:?}: {}", e.0, e.1)),
     }

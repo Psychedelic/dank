@@ -34,7 +34,7 @@ when you are trying to call a method on the mainnet, you have to add the `--netw
 - Withdrawing cycles (You should change the amount):
 
 ```bash
-$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai withdraw "(record { canister_id= principal \"some-canister's-principal-id\"; amount= 2000})"
+$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai burn "(record { canister_id= principal \"some-canister's-principal-id\"; amount= 2000})"
 (variant { Ok = 1 })
 ```
 
@@ -48,14 +48,14 @@ $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai transfer "(record {
 - Depositing cycles to your Dank account (You should change the amount):
 
 ```bash
-$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai deposit "(null)" --with-cycles AMOUNT
+$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai mint "(null)" --with-cycles AMOUNT
 (variant { Ok = 3 })
 ```
 
-NOTE: You can deposit cycles to another Dank account from your identity with the same `deposit` method that we used to deposit cycles to our own Dank account. For that situation, you should change `"(null)"` to a principal ID:
+NOTE: You can deposit cycles to another Dank account from your identity with the same `mint` method that we used to deposit cycles to our own Dank account. For that situation, you should change `"(null)"` to a principal ID:
 
 ```bash
-$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai deposit "(principal \"Some-Principal-ID\")" --with-cycles AMOUNT
+$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai mint "(principal \"Some-Principal-ID\")" --with-cycles AMOUNT
 (variant { Ok = 4 })
 ```
 
@@ -74,7 +74,7 @@ dfx deploy
 NOTE: All of the commands that are used here are put together in a shell script. You can run that shell script locally and
 check the functionality of Dank without executing each command seperately. The script's location is [scripts/interactions.sh](https://github.com/Psychedelic/dank/blob/nima/scripts/interactions.sh).
 
-Now that the canisters are deployed on the IC, we can call their methods. Some methods like `withdraw`, need other canisters.
+Now that the canisters are deployed on the IC, we can call their methods. Some methods like `burn`, need other canisters.
 For that reason, we have created the `piggy-bank` canister. This canister will be used to demonstrate how any other canister on
 the network should interact with Dank. For now, let's just check our balance:
 
@@ -89,7 +89,7 @@ our Piggy Bank. Piggy Bank has a balance of 4TC initially. Let's deposit 4000 cy
 
 ```bash
 $ xtcID=$(dfx canister id xtc)
-$ dfx canister call piggy-bank perform_deposit "(record { canister= principal \"$xtcID\"; account=null; cycles=5000 })"
+$ dfx canister call piggy-bank perform_mint "(record { canister= principal \"$xtcID\"; account=null; cycles=5000 })"
 (variant { Ok = 0 })
 $ dfx canister call xtc balance "(null)"
 (5_000)
@@ -100,7 +100,7 @@ is a canister outside of Dank's network (like any other canister), we should wit
 
 ```bash
 $ piggyID=$(dfx canister id piggy-bank)
-$ dfx canister call xtc withdraw "(record { canister_id= principal \"$piggyID\"; amount= 2000})"
+$ dfx canister call xtc burn "(record { canister_id= principal \"$piggyID\"; amount= 2000})"
 (variant { Ok = 1 })
 $ dfx canister call xtc balance "(null)"
 (4_000)

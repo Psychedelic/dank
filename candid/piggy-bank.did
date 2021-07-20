@@ -1,17 +1,17 @@
 type TransactionId = nat64;
 
-type DepositError = variant {
+type MintError = variant {
     NotSufficientLiquidity;
 };
 
-type DepositResult = variant {
+type MintResult = variant {
     Ok : TransactionId;
-    Err: DepositError;
+    Err: MintError;
 };
 
 service : {
     balance: () -> (amount: nat64);
     get_available_cycles: () -> (amount: nat64);
-    perform_deposit: (record { canister: principal; account: opt principal; cycles: nat64 }) -> (DepositResult);
+    perform_mint: (record { canister: principal; account: opt principal; cycles: nat64 }) -> (MintResult);
     whoami : () -> (principal);
 }

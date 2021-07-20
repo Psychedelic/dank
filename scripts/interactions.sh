@@ -37,7 +37,7 @@ echo
 echo "${action} Depositing 5000 cycles to our XTC account from Piggy Bank"
 echo
 xtcID=$(dfx canister id xtc)
-dfx canister call piggy-bank perform_deposit "(record { canister= principal \"$xtcID\"; account=null; cycles=5000 })"
+dfx canister call piggy-bank perform_mint "(record { canister= principal \"$xtcID\"; account=null; cycles=5000 })"
 
 echo
 piggyBalance=$(dfx canister call piggy-bank balance)
@@ -50,7 +50,7 @@ echo
 echo "${action} Withdrawing 2000 cycles from XTC to Piggy Bank"
 echo
 piggyID=$(dfx canister id piggy-bank)
-dfx canister call xtc withdraw "(record { canister_id= principal \"$piggyID\"; amount= 2000})"
+dfx canister call xtc burn "(record { canister_id= principal \"$piggyID\"; amount= 2000})"
 
 echo
 piggyBalance=$(dfx canister call piggy-bank balance)

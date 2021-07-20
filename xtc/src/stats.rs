@@ -11,8 +11,8 @@ pub struct StatsData {
     balance: u64,
     // Usage statistics
     transfers_count: u64,
-    deposits_count: u64,
-    withdraw_count: u64,
+    mints_count: u64,
+    burns_count: u64,
     proxy_calls_count: u64,
     canisters_created_count: u64,
 }
@@ -24,8 +24,8 @@ impl Default for StatsData {
             history_events: 0,
             balance: 0,
             transfers_count: 0,
-            deposits_count: 0,
-            withdraw_count: 0,
+            mints_count: 0,
+            burns_count: 0,
             proxy_calls_count: 0,
             canisters_created_count: 0,
         }
@@ -34,8 +34,8 @@ impl Default for StatsData {
 
 pub enum CountTarget {
     Transfer,
-    Deposit,
-    Withdraw,
+    Mint,
+    Burn,
     ProxyCall,
     CanisterCreated,
 }
@@ -60,8 +60,8 @@ impl StatsData {
         let stats = storage::get_mut::<StatsData>();
         match target {
             CountTarget::Transfer => stats.transfers_count += 1,
-            CountTarget::Deposit => stats.deposits_count += 1,
-            CountTarget::Withdraw => stats.withdraw_count += 1,
+            CountTarget::Mint => stats.mints_count += 1,
+            CountTarget::Burn => stats.burns_count += 1,
             CountTarget::ProxyCall => stats.proxy_calls_count += 1,
             CountTarget::CanisterCreated => stats.canisters_created_count += 1,
         }
