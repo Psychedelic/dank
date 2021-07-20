@@ -74,18 +74,26 @@ type Event = record {
     timestamp : nat64;
 };
 
-type GetTransactionResult = variant {
-    None;
-    Some : Event;
-};
-
 type EventsConnection = record {
     data            : vec Event;
     next_canister_id: opt principal;
 };
 
+type TokenMetaData = record {
+    name    : text;
+    symbol  : text;
+    decimal : u8;
+    features: vec text;
+};
+
 service : {
-    name: () -> (text);
+    name : () -> text query;
+
+    // Return all of the meta data of a token.
+    meta : () -> (TokenMetaData) query;
+
+    // Return all of the meta data of a token as an update.
+    meta_certified : () -> (TokenMetaData);
 
     balance: (opt principal) -> (amount: nat64);
     deposit: (opt principal) -> (DepositResult);
