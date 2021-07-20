@@ -82,7 +82,7 @@ type EventsConnection = record {
 type TokenMetaData = record {
     name    : text;
     symbol  : text;
-    decimal : u8;
+    decimal : nat8;
     features: vec text;
 };
 
