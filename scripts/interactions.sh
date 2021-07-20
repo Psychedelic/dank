@@ -19,58 +19,58 @@ dfx start --background --clean
 
 # Step 2. Let's deploy our canisters on IC.
 echo
-echo "${action} Deploying Dank and Piggy Bank on IC"
+echo "${action} Deploying XTC and Piggy Bank on IC"
 echo
 dfx deploy
 
 # Step 3. We get Piggy Bank's and our balance.
 echo
-echo "${action} Getting the balances of Piggy Bank and our Dank account"
+echo "${action} Getting the balances of Piggy Bank and our XTC account"
 echo
 piggyBalance=$(dfx canister call piggy-bank balance)
-dankBalance=$(dfx canister call dank balance "(null)")
+xtcBalance=$(dfx canister call xtc balance "(null)")
 echo "Piggy Bank's balance: $piggyBalance"
-echo "Our Dank account's balance: $dankBalance"
+echo "Our XTC account's balance: $xtcBalance"
 
-# Step 4. We deposit some cycles to our Dank account from Piggy-Bank.
+# Step 4. We deposit some cycles to our XTC account from Piggy-Bank.
 echo
-echo "${action} Depositing 5000 cycles to our Dank account from Piggy Bank"
+echo "${action} Depositing 5000 cycles to our XTC account from Piggy Bank"
 echo
-dankID=$(dfx canister id dank)
-dfx canister call piggy-bank perform_deposit "(record { canister= principal \"$dankID\"; account=null; cycles=5000 })"
+xtcID=$(dfx canister id xtc)
+dfx canister call piggy-bank perform_deposit "(record { canister= principal \"$xtcID\"; account=null; cycles=5000 })"
 
 echo
 piggyBalance=$(dfx canister call piggy-bank balance)
-dankBalance=$(dfx canister call dank balance "(null)")
+xtcBalance=$(dfx canister call xtc balance "(null)")
 echo "Piggy Bank's new balance: $piggyBalance"
-echo "Our Dank account's balance: $dankBalance"
+echo "Our XTC account's balance: $xtcBalance"
 
-# Step 5. We withdraw some cycles from Dank.
+# Step 5. We withdraw some cycles from XTC.
 echo
-echo "${action} Withdrawing 2000 cycles from Dank to Piggy Bank"
+echo "${action} Withdrawing 2000 cycles from XTC to Piggy Bank"
 echo
 piggyID=$(dfx canister id piggy-bank)
-dfx canister call dank withdraw "(record { canister_id= principal \"$piggyID\"; amount= 2000})"
+dfx canister call xtc withdraw "(record { canister_id= principal \"$piggyID\"; amount= 2000})"
 
 echo
 piggyBalance=$(dfx canister call piggy-bank balance)
-dankBalance=$(dfx canister call dank balance "(null)")
+xtcBalance=$(dfx canister call xtc balance "(null)")
 echo "Piggy Bank's new balance: $piggyBalance"
-echo "Our Dank account's balance: $dankBalance"
+echo "Our XTC account's balance: $xtcBalance"
 
 # Step 6. We create a new identity and transfer some cycles to it.
 echo
-echo "${action} Creating a new identity named steve and transfering 1000 cycles to it."
+echo "${action} Creating a new identity named steve and transferring 1000 cycles to it."
 echo
 dfx identity new steve || true
 steveID=$(dfx --identity steve identity get-principal)
-dfx canister call dank transfer "(record { to= principal \"$steveID\"; amount= 1000 })"
+dfx canister call xtc transfer "(record { to= principal \"$steveID\"; amount= 1000 })"
 
 echo
-steveBalance=$(dfx --identity steve canister call dank balance "(null)")
-dankBalance=$(dfx canister call dank balance "(null)")
+steveBalance=$(dfx --identity steve canister call xtc balance "(null)")
+xtcBalance=$(dfx canister call xtc balance "(null)")
 echo "Steve's new balance: $steveBalance"
-echo "Our Dank account's balance: $dankBalance"
+echo "Our XTC account's balance: $xtcBalance"
 
 
 # Now that we're done let's stop the service.

@@ -14,7 +14,7 @@ Dank's principal ID on the mainnet is `aanaa-xaaaa-aaaah-aaeiq-cai`. You have to
 ```bash
 $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai balance "(null)"
 (0)
-$ dfx canister --network=ic call dank balance "(null)"
+$ dfx canister --network=ic --no-wallet call xtc balance "(null)"
 (0)
 ```
 
@@ -80,7 +80,7 @@ the network should interact with Dank. For now, let's just check our balance:
 
 ```bash
 $ myID=$(dfx identity get-principal)
-$ dfx canister call dank balance "(null)"
+$ dfx canister call xtc balance "(null)"
 (0)
 ```
 
@@ -88,10 +88,10 @@ As expected, we see that our balance is initially set to zero. To play around wi
 our Piggy Bank. Piggy Bank has a balance of 4TC initially. Let's deposit 4000 cycles from it using these commands:
 
 ```bash
-$ dankID=$(dfx canister id dank)
-$ dfx canister call piggy-bank perform_deposit "(record { canister= principal \"$dankID\"; account=null; cycles=5000 })"
+$ xtcID=$(dfx canister id xtc)
+$ dfx canister call piggy-bank perform_deposit "(record { canister= principal \"$xtcID\"; account=null; cycles=5000 })"
 (variant { Ok = 0 })
-$ dfx canister call dank balance "(null)"
+$ dfx canister call xtc balance "(null)"
 (5_000)
 ```
 
@@ -100,9 +100,9 @@ is a canister outside of Dank's network (like any other canister), we should wit
 
 ```bash
 $ piggyID=$(dfx canister id piggy-bank)
-$ dfx canister call dank withdraw "(record { canister_id= principal \"$piggyID\"; amount= 2000})"
+$ dfx canister call xtc withdraw "(record { canister_id= principal \"$piggyID\"; amount= 2000})"
 (variant { Ok = 1 })
-$ dfx canister call dank balance "(null)"
+$ dfx canister call xtc balance "(null)"
 (4_000)
 ```
 
@@ -116,7 +116,7 @@ $ dfx identity new steve || true
 Creating identity: "steve".
 Created identity: "steve".
 $ steveID=$(dfx --identity steve identity get-principal)
-$ dfx canister call dank transfer "(record { to= principal \"$steveID\"; amount= 1000 })"
+$ dfx canister call xtc transfer "(record { to= principal \"$steveID\"; amount= 1000 })"
 (variant { Ok = 2 })
 ```
 
@@ -126,15 +126,15 @@ and force DFX to use another identity, Dank also uses the account associated wit
 transfer from Steve's account, we would have had to add `--identity steve` after `dfx`:
 
 ```bash
-dfx --identity steve canister call dank transfer "(record { to= principal \"some-principal-id\"; amount= 1000 })"
+dfx --identity steve canister call xtc transfer "(record { to= principal \"some-principal-id\"; amount= 1000 })"
 ```
 
 Now if we check our balance we see that it's decreased by one thousand cycles, and if we check Steve's balance we see that it is one thousand cycles:
 
 ```bash
-$ dfx canister call dank balance "(null)"
+$ dfx canister call xtc balance "(null)"
 (3_000)
-$ dfx --identity steve canister call dank balance "(null)"
+$ dfx --identity steve canister call xtc balance "(null)"
 (1_000)
 ```
 

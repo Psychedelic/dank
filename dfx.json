@@ -2,10 +2,10 @@
   "version": 1,
   "dfx": "0.7.2",
   "canisters": {
-    "dank": {
+    "xtc": {
       "build": "node build.js",
-      "candid": "candid/dank.did",
-      "wasm": "target/wasm32-unknown-unknown/release/dank-opt.wasm",
+      "candid": "candid/xtc.did",
+      "wasm": "target/wasm32-unknown-unknown/release/xtc-opt.wasm",
       "type": "custom"
     },
     "piggy-bank": {
