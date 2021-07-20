@@ -37,5 +37,10 @@ fn balance() -> u64 {
 
 #[update]
 fn get_available_cycles() -> u64 {
-  api::call::msg_cycles_available()
+    api::call::msg_cycles_available()
+}
+
+#[update]
+fn whoami() -> Principal {
+    caller()
 }
