@@ -1,4 +1,5 @@
 use crate::history::{HistoryBuffer, Transaction, TransactionId, TransactionKind};
+use crate::management::IsShutDown;
 use ic_cdk::export::candid::{CandidType, Principal};
 use ic_cdk::*;
 use ic_cdk_macros::*;
@@ -88,6 +89,7 @@ enum TransferError {
 
 #[update]
 fn transfer(args: TransferArguments) -> Result<TransactionId, TransferError> {
+    IsShutDown::guard();
     let user = caller();
     let ledger = storage::get_mut::<Ledger>();
 
@@ -117,6 +119,7 @@ enum DepositError {
 
 #[update]
 fn deposit(account: Option<Principal>) -> Result<TransactionId, DepositError> {
+    IsShutDown::guard();
     let account = account.unwrap_or_else(|| caller());
     let available = api::call::msg_cycles_available();
     let accepted = api::call::msg_cycles_accept(available);
@@ -150,6 +153,7 @@ enum WithdrawError {
 
 #[update]
 async fn withdraw(args: WithdrawArguments) -> Result<TransactionId, WithdrawError> {
+    IsShutDown::guard();
     let user = caller();
     let ledger = storage::get_mut::<Ledger>();
 

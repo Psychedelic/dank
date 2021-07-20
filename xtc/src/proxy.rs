@@ -1,5 +1,6 @@
 use crate::history::{HistoryBuffer, Transaction, TransactionKind};
 use crate::ledger::Ledger;
+use crate::management::IsShutDown;
 use ic_cdk::export::candid::{CandidType, Nat, Principal};
 use ic_cdk::*;
 use ic_cdk_macros::*;
@@ -23,6 +24,7 @@ struct CallResult {
 /// Forward a call to another canister.
 #[update(name = "wallet_call")]
 async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
+    IsShutDown::guard();
     let user = caller();
     if api::id() == user {
         return Err("Attempted to call forward on self. This is not allowed.".to_string());
@@ -96,6 +98,7 @@ pub struct CanisterSettings {
 
 #[update(name = "wallet_create_canister")]
 async fn create_canister(args: CreateCanisterArgs) -> Result<CreateResult, String> {
+    IsShutDown::guard();
     let user = caller();
     if api::id() == user {
         return Err("Attempted to call forward on self. This is not allowed.".to_string());

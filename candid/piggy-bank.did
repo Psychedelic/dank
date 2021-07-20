@@ -13,4 +13,5 @@ service : {
     balance: () -> (amount: nat64);
     get_available_cycles: () -> (amount: nat64);
     perform_deposit: (record { canister: principal; account: opt principal; cycles: nat64 }) -> (DepositResult);
+    whoami : () -> (principal);
 }

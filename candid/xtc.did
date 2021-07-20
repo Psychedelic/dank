@@ -110,5 +110,6 @@ service : {
         controller: opt principal;  // If omitted, set the controller to the caller.
     }) -> (ResultCreate);
 
-    whoami : () -> (principal);
+    // Management
+    halt : () -> ();
 }
