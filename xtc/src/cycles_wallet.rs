@@ -1,10 +1,19 @@
+//! Contains source codes related to making Dank compatible with cycles wallet so it can be used
+//! by the dfx command line.
+
 use crate::history::{HistoryBuffer, Transaction, TransactionKind};
 use crate::ledger::Ledger;
 use crate::management::IsShutDown;
+use crate::meta::meta;
 use ic_cdk::export::candid::{CandidType, Nat, Principal};
 use ic_cdk::*;
 use ic_cdk_macros::*;
 use serde::*;
+
+#[query]
+fn name() -> Option<&'static str> {
+    Some(meta().name)
+}
 
 #[derive(CandidType, Deserialize)]
 struct CallCanisterArgs {
@@ -161,4 +170,79 @@ async fn create_canister(args: CreateCanisterArgs) -> Result<CreateResult, Strin
     };
 
     Ok(create_result)
+}
+
+#[derive(CandidType)]
+struct BalanceResult {
+    amount: u64,
+}
+
+#[query]
+fn wallet_balance() -> BalanceResult {
+    let ledger = storage::get::<Ledger>();
+    let amount = ledger.balance(&caller());
+    BalanceResult { amount }
+}
+
+#[derive(CandidType, Deserialize)]
+struct SendCyclesArgs {
+    canister: Principal,
+    amount: u64,
+}
+
+#[update]
+async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
+    IsShutDown::guard();
+    let user = caller();
+    let ledger = storage::get_mut::<Ledger>();
+
+    ledger
+        .withdraw(&user, args.amount)
+        .map_err(|_| String::from("Insufficient balance."))?;
+
+    #[derive(CandidType)]
+    struct DepositCyclesArg {
+        canister_id: Principal,
+    }
+
+    let (result, refunded) = match api::call::call_with_payment(
+        args.canister.clone(),
+        "wallet_receive",
+        (),
+        args.amount.into(),
+    )
+    .await
+    {
+        Ok(()) => {
+            let refunded = api::call::msg_cycles_refunded();
+            let cycles = args.amount - refunded;
+            let transaction = Transaction {
+                timestamp: api::time(),
+                cycles,
+                fee: 0,
+                kind: TransactionKind::Burn {
+                    from: user.clone(),
+                    to: args.canister,
+                },
+            };
+
+            storage::get_mut::<HistoryBuffer>().push(transaction);
+
+            (Ok(()), refunded)
+        }
+        Err(_) => (Err("Call failed.".into()), args.amount),
+    };
+
+    if refunded > 0 {
+        ledger.deposit(user, refunded);
+    }
+
+    result
+}
+
+#[update]
+fn wallet_create_wallet(_: CreateCanisterArgs) -> Result<CreateResult, String> {
+    Ok(CreateResult {
+        canister_id: api::id(),
+    })
 }

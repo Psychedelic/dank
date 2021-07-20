@@ -99,8 +99,6 @@ type Stats = record {
 };
 
 service : {
-    name : () -> (text) query;
-
     // Return all of the meta data of a token.
     meta : () -> (TokenMetaData) query;
 
@@ -108,21 +106,26 @@ service : {
     meta_certified : () -> (TokenMetaData);
 
     balance: (opt principal) -> (amount: nat64);
+    transfer: (record { to: principal; amount: nat64 }) -> (TransferResponse);
     mint: (opt principal) -> (MintResult);
     burn: (record { canister_id: principal; amount: nat64 }) -> (BurnResult);
-    transfer: (record { to: principal; amount: nat64 }) -> (TransferResponse);
 
     // History
     get_transaction : (id: TransactionId) -> (opt Event);
     events : (record { from: opt nat64; limit: nat16 }) -> (EventsConnection) query;
 
-    // Proxy
-    wallet_call: (record {
-        canister: principal;
-        method_name: text;
-        args: blob;
-        cycles: nat64;
-    }) -> (ResultCall);
+    // Management
+    halt : () -> ();
+
+    // Usage statistics
+    stats : () -> (Stats) query;
+
+    // ----------- Cycles wallet compatible API
+
+    name : () -> (opt text) query;
+
+    wallet_balance: () -> (record { amount: nat64 }) query;
+    wallet_send: (record { canister: principal; amount: nat64 }) -> (ResultSend);
 
     // Managing canister
     wallet_create_canister: (record {
@@ -130,9 +133,16 @@ service : {
         controller: opt principal;  // If omitted, set the controller to the caller.
     }) -> (CreateResult);
 
-    // Management
-    halt : () -> ();
+    wallet_create_wallet: (record {
+        cycles: nat64;
+        controller: opt principal;
+    }) -> (CreateResult);
 
-    // Usage statistics
-    stats : () -> (Stats) query;
+    // Call Forwarding
+    wallet_call: (record {
+        canister: principal;
+        method_name: text;
+        args: blob;
+        cycles: nat64;
+    }) -> (ResultCall);
 }

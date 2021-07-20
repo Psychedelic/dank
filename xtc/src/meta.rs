@@ -2,15 +2,15 @@ use ic_cdk::export::candid::CandidType;
 use ic_cdk_macros::*;
 
 #[derive(CandidType)]
-struct TokenMetaData<'a> {
-    name: &'a str,
-    symbol: &'a str,
-    decimal: u8,
-    features: Vec<&'a str>,
+pub struct TokenMetaData<'a> {
+    pub name: &'a str,
+    pub symbol: &'a str,
+    pub decimal: u8,
+    pub features: Vec<&'a str>,
 }
 
 #[query]
-fn meta() -> TokenMetaData<'static> {
+pub fn meta() -> TokenMetaData<'static> {
     TokenMetaData {
         name: "Dank",
         symbol: "XTC",
@@ -22,9 +22,4 @@ fn meta() -> TokenMetaData<'static> {
 #[update]
 fn meta_certified() -> TokenMetaData<'static> {
     meta()
-}
-
-#[query]
-fn name() -> &'static str {
-    meta().name
 }
