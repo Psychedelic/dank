@@ -29,7 +29,7 @@ impl HistoryBuffer {
     }
 
     #[inline]
-    pub fn push(&mut self, transaction: Transaction) -> TransactionId {
+    pub fn push(&mut self, mut transaction: Transaction) -> TransactionId {
         if transaction.cycles == 0 {
             if let TransactionKind::CanisterCalled { .. } = transaction.kind {
                 // In case it is a call to another canister, just return zero, this number
@@ -49,6 +49,7 @@ impl HistoryBuffer {
             TransactionKind::ChargingStationDeployed { .. } => unreachable!(),
         });
 
+        transaction.timestamp = transaction.timestamp / 1000000;
         let id = self.transactions.len();
         self.transactions.push(transaction);
         id as TransactionId
