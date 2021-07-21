@@ -12,6 +12,7 @@ Each XTC token represents and is backed **1-to-1 with 1 Trillion Cycles (1 XTC =
 - Cycles Token (XTC) Canister ID: ```aanaa-xaaaa-aaaah-aaeiq-cai```
 - [View Canister on IC Rocks](https://ic.rocks/principal/aanaa-xaaaa-aaaah-aaeiq-cai)
 - [Visit our Website for more Details](https://dank.ooo/xtc/)
+- [XTC Overview](https://docs.dank.ooo/xtc/overview/)
 
 ### On the Mainnet - DFX
 
