@@ -4,7 +4,7 @@
 
 The Cycles Token (XTC) is Dank's first product. A cycles canister that provides users with a “wrapped/tokenized” version of cycles (XTC) **that can be held with just a Principal ID** (no need for a Cycles Wallet). The Cycles Token (XTC) was built following a Principal-ID centric token standard [(Repository)](https://github.com/Psychedelic/standards).
 
-**The Cycles Token (XTC) also has built-in developer features and functionality (like Cycles Wallet have)**, built into the XTC token itself so that it can used to **create and manage canisters through proxy calls, or develop in DFX** funding the cycles fees from your Cycles Token balance.
+**The Cycles Token (XTC) also has built-in developer features and functionality (like Cycles Wallet have)**, built into the XTC token itself so that it can be used to **create and manage canisters through proxy calls, or develop in DFX** funding the cycles fees from your Cycles Token balance.
 
 Each XTC token represents and is backed **1-to-1 with 1 Trillion Cycles (1 XTC = 1 Trillion Cycles)**  that they can hold, utilize, pay for computation, and trade with just like with any other token, tied to their Principal ID (and only requiring a Principal ID).
 
@@ -17,7 +17,7 @@ Each XTC token represents and is backed **1-to-1 with 1 Trillion Cycles (1 XTC =
 
 ### On the Mainnet - DFX
 
-XTC offers it's services on the mainnet of the Internet Computer (IC). Interacting with XTC on the mainnet is not much different than interacting with it locally.
+Cycles Token (XTC) offers its services on the mainnet of the Internet Computer (IC). Interacting with XTC on the mainnet is not much different than interacting with it locally.
 XTC's Token Canister ID on the mainnet is `aanaa-xaaaa-aaaah-aaeiq-cai`. You have to use either this address for your calls or just simply use `xtc`.
 
 **Checking your balance with this ID on XTC:**
