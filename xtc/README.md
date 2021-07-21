@@ -8,19 +8,17 @@ The Cycles Token (XTC) is Dank's first product. A cycles canister that provides 
 
 Each XTC token represents and is backed **1-to-1 with 1 Trillion Cycles (1 XTC = 1 Trillion Cycles)**  that they can hold, utilize, pay for computation, and trade with just like with any other token, tied to their Principal ID (and only requiring a Principal ID).
 
-## Interacting with Cycles Token (XTC)
-
 - Cycles Token (XTC) Canister ID: ```aanaa-xaaaa-aaaah-aaeiq-cai```
 - [View Canister on IC Rocks](https://ic.rocks/principal/aanaa-xaaaa-aaaah-aaeiq-cai)
 - [Visit our Website for more Details](https://dank.ooo/xtc/)
 - [XTC Documentation - Overview](https://docs.dank.ooo/xtc/overview/)
 
-### On the Mainnet - DFX
+## Interacting with Cycles Token (XTC) - On Mainnet (DFX)
 
 Cycles Token (XTC) offers its services on the mainnet of the Internet Computer (IC). Interacting with XTC on the mainnet is not much different than interacting with it locally.
-XTC's Token Canister ID on the mainnet is `aanaa-xaaaa-aaaah-aaeiq-cai`. You have to use either this address for your calls or just simply use `xtc`.
+XTC's Token Canister ID on the mainnet is `aanaa-xaaaa-aaaah-aaeiq-cai`. **You have to use this address for your calls**.
 
-**Checking your balance with this ID on XTC:**
+### Check your balance on Cycles Token (XTC):
 
 ```bash
 $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai balance "(null)"
@@ -39,21 +37,8 @@ $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai balance "(principal
 (0)
 ```
 
-- **Withdrawing Cycles to Canister** -(Unwrapping Cycles Token (XTC) into Cycles and sending to Canister ID):
-
-```bash
-$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai burn "(record { canister_id= principal \"some-canister's-principal-id\"; amount= 2000})"
-(variant { Ok = 1 })
-```
-
-- **Transferring cycles to another XTC balance/Principal ID** (Sending XTC to a Principal ID, balances change internally on the XTC ledger):**
-
-```bash
-$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai transfer "(record { to= principal \"some-account's-principal-id\"; amount= 1000 })"
-(variant { Ok = 2 })
-```
-
-- **Depositing cycles to your Cycles Token (XTC) balance** (Deposit cycles, which are locked, "minting" your 1-1 XTC balance):
+### Depositing cycles to your Cycles Token (XTC) balance
+Deposit cycles into the XTC canister, which are locked to "mint" your 1-1 Cycles Token (XTC), tied to your Principal ID. Remember that 1 XTC = 1 Trillion Cycles. (You should change the amount)
 
 ```bash
 $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai mint "(null)" --with-cycles AMOUNT
@@ -67,9 +52,26 @@ $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai mint "(principal \"
 (variant { Ok = 4 })
 ```
 
-- **Creating canisters using XTC**:
 
-You can create canisters using your XTC balance. Using `wallet_create_canister` method, you can create a canister and set the controller of
+### Withdrawing Cycles to Canister
+Unwraps Cycles Token (XTC) into raw Cycles to send them to a to Canister ID. (You should change the amount)
+
+```bash
+$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai burn "(record { canister_id= principal \"some-canister's-principal-id\"; amount= 2000})"
+(variant { Ok = 1 })
+```
+
+### Transferring cycles to another XTC balance/Principal ID
+Send Cycles Token (XTC) to a Principal ID, balances change internally on the XTC ledger. (You should change the amount)
+
+```bash
+$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai transfer "(record { to= principal \"some-account's-principal-id\"; amount= 1000 })"
+(variant { Ok = 2 })
+```
+
+### Creating canisters using Cycles Token (XTC):
+
+You can create canisters using your Cycles Token (XTC) balance. Using `wallet_create_canister` method, you can create a canister and set the controller of
 the canister to a principal ID you want. If you leave the controller to be `null`, you will be automatically selected as the controller of the newly created canister. Using the `cycles` parameter, it is possible to deposit cycles to your new canister from your XTC balance.
 
 ```bash
@@ -77,9 +79,9 @@ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai wallet_create_caniste
 
 ```
 
-- **Proxy calls with XTC**:
+### Proxy canister calls with XTC:
 
-XTC allows you to proxy all of your `dfx` calls through it so your XTC balance is used. To use this feature, you should use the `wallet_call` method. This method accepts four arguments:
+XTC allows you to proxy all of your `dfx` calls through it so your Cycles Token (XTC) balance is used to fund the operations (the XTC canister unwraps them to raw cycles). To use this feature, you should use the `wallet_call` method. This method accepts four arguments:
 
   - canister: principal -> Your target canister
   - method_name: text -> The method you want to call from that canister
