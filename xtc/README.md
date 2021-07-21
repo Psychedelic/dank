@@ -86,7 +86,7 @@ XTC allows you to proxy all of your `dfx` calls through it so your XTC balance i
   - args: blob -> The arguments you should pass to for the call
   - cycles: nat64 -> The amount of cycles you want to pass
 
-Let's proxy a call to Piggy Bank's `whoami` method. We expect this method to return our XTC balance's ID:
+Let's proxy a call to the Piggy Bank canister's `whoami` method (an example canister we deployed to show an example of a proxy call!). We expect this method to return our XTC balance's ID:
 
 ```bash
 dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai wallet_call "(record { canister= principal \"dmj37-5iaaa-aaaad-qakya-cai\"; method_name= \"whoami\"; args= blob \"DIDL\01nh\01\00\00\"; cycles= (0:nat64); })"
