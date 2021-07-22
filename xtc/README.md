@@ -115,6 +115,39 @@ The dfx cli tool provides helper functions during development that consumes cycl
 dfx identity --network=ic set-wallet aanaa-xaaaa-aaaah-aaeiq-cai --force
 ```
 
+### Using dfx deploy with Cycles Token (XTC):
+
+The `dfx deploy` command shows an error when deploying within a dfx project when the cycle wallet is set as the `XTC` canister. The `deploy` command successfully creates the canister, but fails when installing the wasm code (this is due to dfx assuming the controller of the new canister is the cycle wallet, not the dfx identity).
+
+To deploy a projects canisters, instead of `dfx deploy --network=ic` separate the canister and install commands:
+
+```bash
+dfx canister --network=ic create --all
+dfx deploy --network=ic --no-wallet
+```
+
+As an example of setting up and deploying a new project once dfx has been installed:
+
+```bash
+# Set XTC as the dfx cycle token
+dfx identity --network=ic set-wallet aanaa-xaaaa-aaaah-aaeiq-cai --force
+
+# Create a new dfx project
+dfx new example
+
+# move into the project directory
+cd example
+
+# install the node.js dependencies
+npm install
+
+# Create the empty canisters on mainnet
+dfx canister --network=ic create --all
+
+# Install the code into the empty canisters on mainnet
+dfx deploy --network=ic --no-wallet
+```
+
 ----
 
 ### Interacting with XTC locally (For Testing Purposes)
