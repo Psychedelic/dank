@@ -74,7 +74,9 @@ $ dfx canister --network=ic --no-wallet call aanaa-xaaaa-aaaah-aaeiq-cai transfe
 
 ### Creating canisters using Cycles Token (XTC):
 
-You can create canisters using your Cycles Token (XTC) balance. Using `wallet_create_canister` method, you can create a canister and set the controller of
+You can create canisters using your Cycles Token (XTC) balance. This is, however, a low level api, if you want to deploy your canister using your XTC balance see ([Set Cycles Token (XTC) as your default wallet in dfx](#set-cycles-token-xtc-as-your-default-wallet-in-dfx)).
+
+Using `wallet_create_canister` method, you can create a canister and set the controller of
 the canister to a principal ID you want. If you leave the controller to be `null`, you will be automatically selected as the controller of the newly created canister. Using the `cycles` parameter, it is possible to deposit cycles to your new canister from your XTC balance.
 
 ```bash
