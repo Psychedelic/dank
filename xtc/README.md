@@ -77,15 +77,12 @@ You can create canisters using your Cycles Token (XTC) balance. Using `wallet_cr
 the canister to a principal ID you want. If you leave the controller to be `null`, you will be automatically selected as the controller of the newly created canister. Using the `cycles` parameter, it is possible to deposit cycles to your new canister from your XTC balance.
 
 ```bash
-dfx canister --network=ic --no-wallet call aanaa-xaaaa-aaaah-aaeiq-cai wallet_create_canister "(record {cycles= (AMOUNT:nat64); controller= (null); })"
-
-# returning the created canister id
+$ dfx canister --network=ic --no-wallet call aanaa-xaaaa-aaaah-aaeiq-cai wallet_create_canister "(record {cycles= (AMOUNT:nat64); controller= (null); })"
 (
   variant {
     17_724 = record { 1_313_628_723 = principal "CREATED_CANISTER_ID" }
   },
 )
-
 ```
 
 To check the status of the created canister run the dfx canister `status` command with the returned `CREATED_CANISTER_ID`:
