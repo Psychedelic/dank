@@ -94,6 +94,12 @@ To check the status of the created canister run the dfx canister `status` comman
 dfx canister --network=ic --no-wallet status CREATED_CANISTER_ID
 ```
 
+The created canister is empty, to install wasm code you must use the dfx canister install command from the root of a dfx project (see `dfx new` command for creating a dfx project) setting the `CREATED_CANISTER_ID` value to the id of the:
+
+```bash
+dfx canister --network=ic --no-wallet install -m install CREATED_CANISTER_ID
+```
+
 ### Proxy canister calls with XTC:
 
 XTC allows you to proxy all of your `dfx` calls through it so your Cycles Token (XTC) balance is used to fund the operations (the XTC canister unwraps them to raw cycles). To use this feature, you should use the `wallet_call` method. This method accepts four arguments:
