@@ -38,7 +38,7 @@ $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai balance "(principal
 ```
 
 ### Depositing cycles to your Cycles Token (XTC) balance
-Deposit cycles into the XTC canister, which are locked to "mint" your 1-1 Cycles Token (XTC), tied to your Principal ID. Remember that 1 XTC = 1 Trillion Cycles. (You should change the amount)
+Deposit cycles into the XTC canister, which are locked to "mint" your 1-1 Cycles Token (XTC), tied to your Principal ID. The AMOUNT is in cycles (You should change the amount)
 
 ```bash
 $ dfx canister --network=ic --wallet=$(dfx identity --network=ic get-wallet) call --with-cycles AMOUNT aanaa-xaaaa-aaaah-aaeiq-cai mint "(principal \"$(dfx identity get-principal)\")"
@@ -77,8 +77,21 @@ You can create canisters using your Cycles Token (XTC) balance. Using `wallet_cr
 the canister to a principal ID you want. If you leave the controller to be `null`, you will be automatically selected as the controller of the newly created canister. Using the `cycles` parameter, it is possible to deposit cycles to your new canister from your XTC balance.
 
 ```bash
-dfx canister --network=ic --no-wallet call aanaa-xaaaa-aaaah-aaeiq-cai wallet_create_canister "(record (cycles: (AMOUNT:nat64); controller: (\"null\"); ))"
+dfx canister --network=ic --no-wallet call aanaa-xaaaa-aaaah-aaeiq-cai wallet_create_canister "(record {cycles= (AMOUNT:nat64); controller= (null); })"
 
+# returning the created canister id
+(
+  variant {
+    17_724 = record { 1_313_628_723 = principal "CREATED_CANISTER_ID" }
+  },
+)
+
+```
+
+To check the status of the created canister run the dfx canister `status` command with the returned `CREATED_CANISTER_ID`:
+
+```bash
+dfx canister --network=ic --no-wallet status CREATED_CANISTER_ID
 ```
 
 ### Proxy canister calls with XTC:
