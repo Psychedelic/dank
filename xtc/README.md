@@ -21,7 +21,7 @@ XTC's Token Canister ID on the mainnet is `aanaa-xaaaa-aaaah-aaeiq-cai`. **You h
 ### Check your balance on Cycles Token (XTC):
 
 ```bash
-$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai balance "(null)"
+$ dfx canister --network=ic --no-wallet call aanaa-xaaaa-aaaah-aaeiq-cai balance "(null)"
 (0)
 $ dfx canister --network=ic --no-wallet call xtc balance "(null)"
 (0)
@@ -41,23 +41,25 @@ $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai balance "(principal
 Deposit cycles into the XTC canister, which are locked to "mint" your 1-1 Cycles Token (XTC), tied to your Principal ID. Remember that 1 XTC = 1 Trillion Cycles. (You should change the amount)
 
 ```bash
-$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai mint "(null)" --with-cycles AMOUNT
+$ dfx canister --network=ic --wallet=$(dfx identity --network=ic get-wallet) call --with-cycles AMOUNT aanaa-xaaaa-aaaah-aaeiq-cai mint "(principal \"$(dfx identity get-principal)\")"
 (variant { Ok = 3 })
 ```
 
-NOTE: You can deposit cycles to another XTC balance from your identity with the same `mint` method that we used to deposit cycles to our own XTC balance. For that situation, you should change `"(null)"` to a principal ID:
+NOTE: You can deposit cycles to another XTC balance from your identity with the same `mint` method that we used to deposit cycles to our own XTC balance. For that situation, you should change the argument to a principal ID:
 
 ```bash
-$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai mint "(principal \"Some-Principal-ID\")" --with-cycles AMOUNT
+$ dfx canister --network=ic --wallet=$(dfx identity --network=ic get-wallet) call --with-cycles AMOUNT aanaa-xaaaa-aaaah-aaeiq-cai mint "(principal \"Some-Principal-ID\")"
 (variant { Ok = 4 })
 ```
 
+Note: This command should not require the `--wallet` flag, but we need the `--wallet` to make `--with-cycles` work. This is a known DFX bug.
+
 
 ### Withdrawing Cycles to Canister
-Unwraps Cycles Token (XTC) into raw Cycles to send them to a to Canister ID. (You should change the amount)
+Unwraps Cycles Token (XTC) into raw Cycles to send them to a Canister ID. (You should change the amount)
 
 ```bash
-$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai burn "(record { canister_id= principal \"some-canister's-principal-id\"; amount= 2000})"
+$ dfx canister --network=ic --no-wallet call aanaa-xaaaa-aaaah-aaeiq-cai burn "(record { canister_id= principal \"some-canister's-principal-id\"; amount= 2000})"
 (variant { Ok = 1 })
 ```
 
@@ -65,7 +67,7 @@ $ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai burn "(record { can
 Send Cycles Token (XTC) to a Principal ID, balances change internally on the XTC ledger. (You should change the amount)
 
 ```bash
-$ dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai transfer "(record { to= principal \"some-account's-principal-id\"; amount= 1000 })"
+$ dfx canister --network=ic --no-wallet call aanaa-xaaaa-aaaah-aaeiq-cai transfer "(record { to= principal \"some-account's-principal-id\"; amount= 1000 })"
 (variant { Ok = 2 })
 ```
 
@@ -75,7 +77,7 @@ You can create canisters using your Cycles Token (XTC) balance. Using `wallet_cr
 the canister to a principal ID you want. If you leave the controller to be `null`, you will be automatically selected as the controller of the newly created canister. Using the `cycles` parameter, it is possible to deposit cycles to your new canister from your XTC balance.
 
 ```bash
-dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai wallet_create_canister "(record (cycles: (AMOUNT:nat64); controller: (\"null\"); ))"
+dfx canister --network=ic --no-wallet call aanaa-xaaaa-aaaah-aaeiq-cai wallet_create_canister "(record (cycles: (AMOUNT:nat64); controller: (\"null\"); ))"
 
 ```
 
