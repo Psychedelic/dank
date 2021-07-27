@@ -39,22 +39,24 @@ impl Ledger {
 
     #[inline]
     pub fn deposit(&mut self, account: Principal, amount: u64) {
-        StatsData::deposit(amount);
+        let fee = 2_000_000_000;
+        StatsData::deposit(amount - fee);
         match self.0.entry(account) {
             Entry::Occupied(mut e) => {
-                e.insert(*e.get() + amount);
+                e.insert(*e.get() + amount - fee);
             }
             Entry::Vacant(e) => {
-                e.insert(amount);
+                e.insert(amount - fee);
             }
         }
     }
 
     #[inline]
     pub fn withdraw(&mut self, account: &Principal, amount: u64) -> Result<(), ()> {
+        let fee = 2_000_000_000;
         let balance = match self.0.get_mut(&account) {
-            Some(balance) if *balance >= amount => {
-                *balance -= amount;
+            Some(balance) if *balance >= (amount + fee) => {
+                *balance -= amount + fee;
                 *balance
             }
             _ => return Err(()),
