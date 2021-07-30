@@ -78,7 +78,7 @@ pub fn balance(account: Option<Principal>) -> u64 {
     ledger.balance(&account.unwrap_or_else(|| caller()))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, CandidType)]
 struct TransferArguments {
     to: Principal,
     amount: u64,
