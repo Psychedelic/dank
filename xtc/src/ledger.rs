@@ -8,6 +8,7 @@ use serde::*;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
+const fee: u64 = 2_000_000_000;
 pub struct Ledger(HashMap<Principal, u64>);
 
 impl Default for Ledger {
@@ -39,7 +40,6 @@ impl Ledger {
 
     #[inline]
     pub fn deposit(&mut self, account: Principal, amount: u64) {
-        let fee = 2_000_000_000;
         StatsData::deposit(amount - fee);
         match self.0.entry(account) {
             Entry::Occupied(mut e) => {
@@ -53,7 +53,6 @@ impl Ledger {
 
     #[inline]
     pub fn withdraw(&mut self, account: &Principal, amount: u64) -> Result<(), ()> {
-        let fee = 2_000_000_000;
         let balance = match self.0.get_mut(&account) {
             Some(balance) if *balance >= (amount + fee) => {
                 *balance -= amount + fee;
@@ -128,6 +127,9 @@ fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
     IsShutDown::guard();
     let account = account.unwrap_or_else(|| caller());
     let available = api::call::msg_cycles_available();
+    if available <= fee {
+        return Err(MintError::NotSufficientLiquidity);
+    }
     let accepted = api::call::msg_cycles_accept(available);
 
     let ledger = storage::get_mut::<Ledger>();
@@ -250,7 +252,7 @@ mod tests {
         assert_eq!(ledger.balance(&alice()), 900);
 
         ledger.deposit(alice(), 100_000_000_000);
-        assert!(ledger.withdraw(&alice(), 1000).is_ok());
+        assert!(ledger.withdraw(&alice(), 100_000_000_000).is_ok());
         assert_eq!(ledger.balance(&alice()), 0);
         assert_eq!(ledger.balance(&bob()), 0);
         assert_eq!(ledger.balance(&john()), 0);
