@@ -144,7 +144,7 @@ fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
     Ok(id)
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, CandidType)]
 struct BurnArguments {
     canister_id: Principal,
     amount: u64,
