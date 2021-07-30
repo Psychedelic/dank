@@ -8,7 +8,7 @@ use serde::*;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
-const fee: u64 = 2_000_000_000;
+const FEE: u64 = 2_000_000_000;
 pub struct Ledger(HashMap<Principal, u64>);
 
 impl Default for Ledger {
@@ -40,13 +40,16 @@ impl Ledger {
 
     #[inline]
     pub fn deposit(&mut self, account: Principal, amount: u64) {
-        StatsData::deposit(amount - fee);
+        if amount <= FEE {
+            return;
+        }
+        StatsData::deposit(amount - FEE);
         match self.0.entry(account) {
             Entry::Occupied(mut e) => {
-                e.insert(*e.get() + amount - fee);
+                e.insert(*e.get() + amount - FEE);
             }
             Entry::Vacant(e) => {
-                e.insert(amount - fee);
+                e.insert(amount - FEE);
             }
         }
     }
@@ -54,8 +57,8 @@ impl Ledger {
     #[inline]
     pub fn withdraw(&mut self, account: &Principal, amount: u64) -> Result<(), ()> {
         let balance = match self.0.get_mut(&account) {
-            Some(balance) if *balance >= (amount + fee) => {
-                *balance -= amount + fee;
+            Some(balance) if *balance >= (amount + FEE) => {
+                *balance -= amount + FEE;
                 *balance
             }
             _ => return Err(()),
@@ -106,7 +109,7 @@ fn transfer(args: TransferArguments) -> Result<TransactionId, TransferError> {
     let transaction = Transaction {
         timestamp: api::time(),
         cycles: args.amount,
-        fee: 0,
+        fee: 2_000_000_000,
         kind: TransactionKind::Transfer {
             from: user,
             to: args.to,
@@ -127,7 +130,7 @@ fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
     IsShutDown::guard();
     let account = account.unwrap_or_else(|| caller());
     let available = api::call::msg_cycles_available();
-    if available <= fee {
+    if available <= FEE {
         return Err(MintError::NotSufficientLiquidity);
     }
     let accepted = api::call::msg_cycles_accept(available);
@@ -138,7 +141,7 @@ fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
     let transaction = Transaction {
         timestamp: api::time(),
         cycles: accepted,
-        fee: 0,
+        fee: 2_000_000_000,
         kind: TransactionKind::Mint { to: account },
     };
 
@@ -192,7 +195,7 @@ async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
             let transaction = Transaction {
                 timestamp: api::time(),
                 cycles,
-                fee: 0,
+                fee: 2_000_000_000,
                 kind: TransactionKind::Burn {
                     from: user.clone(),
                     to: args.canister_id,
@@ -238,22 +241,23 @@ mod tests {
         assert_eq!(ledger.balance(&john()), 0);
 
         // Deposit should work.
-        ledger.deposit(alice(), 1000);
-        assert_eq!(ledger.balance(&alice()), 1000);
+        ledger.deposit(alice(), 100_000_000_000);
+        // 2 billion cycles fee is the difference.
+        assert_eq!(ledger.balance(&alice()), 98_000_000_000);
         assert_eq!(ledger.balance(&bob()), 0);
         assert_eq!(ledger.balance(&john()), 0);
 
-        assert!(ledger.withdraw(&alice(), 100).is_ok());
-        assert_eq!(ledger.balance(&alice()), 900);
+        assert!(ledger.withdraw(&alice(), 10_000_000_000).is_ok());
+        assert_eq!(ledger.balance(&alice()), 86_000_000_000);
         assert_eq!(ledger.balance(&bob()), 0);
         assert_eq!(ledger.balance(&john()), 0);
 
-        assert!(ledger.withdraw(&alice(), 1000).is_err());
-        assert_eq!(ledger.balance(&alice()), 900);
+        assert!(ledger.withdraw(&alice(), 90_000_000_000).is_err());
+        assert_eq!(ledger.balance(&alice()), 86_000_000_000);
 
         ledger.deposit(alice(), 100_000_000_000);
         assert!(ledger.withdraw(&alice(), 100_000_000_000).is_ok());
-        assert_eq!(ledger.balance(&alice()), 0);
+        assert_eq!(ledger.balance(&alice()), 82_000_000_000);
         assert_eq!(ledger.balance(&bob()), 0);
         assert_eq!(ledger.balance(&john()), 0);
     }
