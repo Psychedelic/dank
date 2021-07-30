@@ -249,7 +249,7 @@ mod tests {
         assert!(ledger.withdraw(&alice(), 1000).is_err());
         assert_eq!(ledger.balance(&alice()), 900);
 
-        ledger.deposit(alice(), 100);
+        ledger.deposit(alice(), 100_000_000_000);
         assert!(ledger.withdraw(&alice(), 1000).is_ok());
         assert_eq!(ledger.balance(&alice()), 0);
         assert_eq!(ledger.balance(&bob()), 0);
