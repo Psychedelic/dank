@@ -48,3 +48,17 @@ pub struct EventsConnection<'a> {
 }
 
 pub type TransactionId = u64;
+
+#[derive(Deserialize, CandidType)]
+pub struct SetBucketMetadataArgs {
+    pub from: TransactionId,
+    pub next: Option<Principal>,
+}
+
+#[derive(Deserialize, CandidType)]
+pub struct BucketMetadata {
+    pub version: u64,
+    pub size: usize,
+    pub from: TransactionId,
+    pub next: Option<Principal>,
+}
