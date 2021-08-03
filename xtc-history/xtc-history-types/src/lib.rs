@@ -54,11 +54,3 @@ pub struct SetBucketMetadataArgs {
     pub from: TransactionId,
     pub next: Option<Principal>,
 }
-
-#[derive(Deserialize, CandidType)]
-pub struct BucketMetadata {
-    pub version: u64,
-    pub size: usize,
-    pub from: TransactionId,
-    pub next: Option<Principal>,
-}

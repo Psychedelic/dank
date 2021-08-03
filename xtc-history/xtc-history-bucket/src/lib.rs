@@ -1,6 +1,7 @@
-use ic_cdk::export::Principal;
+use ic_cdk::export::candid::{CandidType, Principal};
 use ic_cdk::*;
 use ic_cdk_macros::*;
+use serde::Deserialize;
 use xtc_history_types::*;
 
 struct BucketData {
@@ -76,6 +77,14 @@ impl BucketData {
 fn init() {
     let data = storage::get_mut::<BucketData>();
     data.controller = Some(caller());
+}
+
+#[derive(Deserialize, CandidType)]
+pub struct BucketMetadata {
+    pub version: u64,
+    pub size: usize,
+    pub from: TransactionId,
+    pub next: Option<Principal>,
 }
 
 #[query]

@@ -8,8 +8,7 @@ pub struct History {
 }
 
 impl History {
-    pub fn push(&mut self, event: Transaction) {
-    }
+    pub fn push(&mut self, event: Transaction) {}
 
     #[inline]
     pub async fn progress(&mut self) -> bool {
