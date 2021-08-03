@@ -92,13 +92,22 @@ fn metadata() -> BucketMetadata {
 #[update]
 fn set_metadata(meta: SetBucketMetadataArgs) {
     let data = storage::get_mut::<BucketData>();
+
+    if caller() != data.controller.unwrap() {
+        trap("Only the controller is allowed to call set_metadata.");
+    }
+
     data.from = Some(meta.from);
     data.next = meta.next;
 }
 
 #[update]
 fn push(events: Vec<Transaction>) {
-    storage::get_mut::<BucketData>().push(events);
+    let data = storage::get_mut::<BucketData>();
+    if caller() != data.controller.unwrap() {
+        trap("Only the controller is allowed to call set_metadata.");
+    }
+    data.push(events);
 }
 
 #[query]

@@ -7,6 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+xtc-history-types = {path="../xtc-history-types"}
 ic-cdk = "0.3.0"
 serde = { version="1.0.116", features = ["derive"] }
 serde_bytes = "0.11"
