@@ -8,8 +8,8 @@ const BUCKET_WASM: &[u8] =
 
 pub struct HistoryFlusher {
     state: State,
-    head: Option<Principal>,
-    data: Vec<Transaction>,
+    pub(crate) head: Option<Principal>,
+    pub(crate) data: Vec<Transaction>,
     chunk_size: usize,
     in_progress: bool,
     cursor: usize,
