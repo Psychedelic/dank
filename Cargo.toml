@@ -2,6 +2,10 @@
 members = [
     "xtc",
     "piggy-bank",
+#    History
+    "xtc-history/xtc-history",
+    "xtc-history/xtc-history-bucket",
+    "xtc-history/xtc-history-types",
 ]
 
 [profile.release]
