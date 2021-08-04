@@ -1,3 +1,4 @@
+use crate::BucketsList;
 use ic_cdk::export::candid::{CandidType, Nat, Principal};
 use ic_cdk::*;
 use serde::Deserialize;
@@ -8,7 +9,6 @@ const BUCKET_WASM: &[u8] =
 
 pub struct HistoryFlusher {
     state: State,
-    pub(crate) head: Option<Principal>,
     pub(crate) data: Vec<Transaction>,
     chunk_size: usize,
     in_progress: bool,
@@ -66,7 +66,6 @@ impl HistoryFlusher {
                 Some(_) => State::PushChunk,
                 None => State::CreateCanister,
             },
-            head,
             data,
             chunk_size,
             global_cursor,
@@ -75,7 +74,7 @@ impl HistoryFlusher {
         }
     }
 
-    pub async fn progress(&mut self) -> ProgressResult {
+    pub async fn progress(&mut self, buckets: &mut BucketsList) -> ProgressResult {
         if State::Done == self.state {
             return ProgressResult::Done;
         }
@@ -189,7 +188,7 @@ impl HistoryFlusher {
                 State::WriteMetadata { canister_id } => {
                     let metadata = SetBucketMetadataArgs {
                         from: self.global_cursor,
-                        next: self.head.clone(),
+                        next: buckets.get_head().cloned(),
                     };
 
                     match api::call::call(canister_id.clone(), "set_metadata", (metadata,)).await {
@@ -203,12 +202,12 @@ impl HistoryFlusher {
                         }
                     };
 
-                    self.head = Some(canister_id);
+                    buckets.insert(canister_id, self.global_cursor);
                     self.state = State::PushChunk;
                 }
                 State::PushChunk => {
                     let chunk = &self.data[self.cursor..self.cursor + self.chunk_size];
-                    let canister_id = self.head.unwrap().clone();
+                    let canister_id = buckets.get_head().cloned().unwrap();
 
                     match api::call::call(canister_id, "push", (chunk,)).await {
                         Ok(x) => x,
