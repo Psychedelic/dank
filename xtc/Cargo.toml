@@ -5,6 +5,8 @@ authors = ["Parsa Ghadimi <parsa@fleek.co>"]
 edition = "2018"
 
 [dependencies]
+xtc-history = {path="../xtc-history/xtc-history"}
+xtc-history-types = {path="../xtc-history/xtc-history-types"}
 ic-cdk = "0.3.0"
 ic-cdk-macros = "0.3.0"
 serde = { version="1.0.116", features = ["derive"] }

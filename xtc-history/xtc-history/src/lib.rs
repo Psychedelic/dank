@@ -1,6 +1,8 @@
 use crate::flush::{HistoryFlusher, ProgressResult};
+use ic_cdk::export::candid::CandidType;
 use ic_cdk::export::Principal;
 use ic_cdk::trap;
+use serde::Deserialize;
 use std::collections::BTreeMap;
 use xtc_history_types::{EventsConnection, Transaction, TransactionId};
 
@@ -18,6 +20,20 @@ pub struct History {
 pub struct BucketsList {
     buckets: BTreeMap<TransactionId, Principal>,
     head: Option<Principal>,
+}
+
+#[derive(CandidType)]
+pub struct HistoryArchiveBorrowed<'e, 'b> {
+    cursor: TransactionId,
+    events: &'e Vec<Transaction>,
+    buckets: &'b BTreeMap<TransactionId, Principal>,
+}
+
+#[derive(CandidType, Deserialize)]
+pub struct HistoryArchive {
+    cursor: TransactionId,
+    events: Vec<Transaction>,
+    buckets: BTreeMap<TransactionId, Principal>,
 }
 
 impl History {
@@ -38,7 +54,42 @@ impl History {
     }
 
     #[inline]
-    fn get_transaction(&self, id: TransactionId) -> Option<&Transaction> {
+    pub fn archive(&self) -> HistoryArchiveBorrowed {
+        // Prevent upgrades during an active flush.
+        assert!(
+            self.flusher.is_none(),
+            "Flush in progress, try again later."
+        );
+        HistoryArchiveBorrowed {
+            cursor: self.cursor,
+            events: &self.data,
+            buckets: &self.buckets.buckets,
+        }
+    }
+
+    #[inline]
+    pub fn load(&mut self, mut archive: HistoryArchive) {
+        assert!(self.data.is_empty() && self.buckets.buckets.is_empty());
+        self.cursor = archive.cursor;
+        self.data.append(&mut archive.events);
+        self.buckets.buckets.append(&mut archive.buckets);
+        self.buckets.set_head();
+    }
+
+    #[inline]
+    pub fn load_v0(&mut self, mut data: Vec<Transaction>) {
+        assert!(self.data.is_empty() && self.buckets.buckets.is_empty());
+        self.data.append(&mut data);
+        self.cursor = self.data.len() as TransactionId;
+    }
+
+    #[inline]
+    pub fn len(&self) -> TransactionId {
+        self.cursor
+    }
+
+    #[inline]
+    pub fn get_transaction(&self, id: TransactionId) -> Option<&Transaction> {
         // 00 01 02 03 04 05             6 - 6 = 0
         // 06 07 08 09 10 11            12 - 6 = 6
         // Get(8)  -> Get(8 - (12 - 6)) -> Get(2)
@@ -142,6 +193,17 @@ impl BucketsList {
     #[inline]
     pub fn get_head(&self) -> Option<&Principal> {
         self.head.as_ref()
+    }
+
+    /// Sync the .head with the actual head, always call when you modify .buckets
+    /// manually.
+    #[inline]
+    pub(crate) fn set_head(&mut self) {
+        let last = self.buckets.iter().rev().take(1).next();
+        self.head = match last {
+            None => None,
+            Some((_, id)) => Some(id.clone()),
+        };
     }
 }
 
