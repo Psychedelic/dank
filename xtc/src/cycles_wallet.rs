@@ -243,7 +243,8 @@ async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
 }
 
 #[update]
-fn wallet_create_wallet(_: CreateCanisterArgs) -> Result<CreateResult, String> {
+async fn wallet_create_wallet(_: CreateCanisterArgs) -> Result<CreateResult, String> {
+    crate::progress().await;
     Ok(CreateResult {
         canister_id: api::id(),
     })

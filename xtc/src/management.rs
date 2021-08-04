@@ -68,3 +68,16 @@ fn halt() {
 
     storage::get_mut::<IsShutDown>().0 = true;
 }
+
+#[update]
+fn finish_pending_tasks(limit: u32) {
+    if caller() != Controller::get_principal() {
+        trap("Only the controller can call this method.");
+    }
+
+    for _ in 0..limit {
+        if !crate::progress().await {
+            return;
+        }
+    }
+}
