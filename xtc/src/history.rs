@@ -1,11 +1,7 @@
 use crate::stats::{CountTarget, StatsData};
-use ic_cdk::export::candid::CandidType;
-use ic_cdk::export::Principal;
 use ic_cdk::*;
 use ic_cdk_macros::*;
-use serde::Deserialize;
 use xtc_history::{History, HistoryArchive, HistoryArchiveBorrowed};
-use xtc_history_types::*;
 
 pub use xtc_history_types::*;
 
@@ -39,7 +35,7 @@ impl HistoryBuffer {
 
     #[inline]
     pub async fn progress(&mut self) -> bool {
-        self.history.progress()
+        self.history.progress().await
     }
 
     #[inline]
@@ -73,13 +69,13 @@ impl HistoryBuffer {
 }
 
 #[update]
-fn get_transaction(id: TransactionId) -> Option<&'static Transaction> {
+async fn get_transaction(id: TransactionId) -> Option<&'static Transaction> {
     crate::progress().await;
     storage::get::<HistoryBuffer>().history.get_transaction(id)
 }
 
 #[query]
-fn events(args: EventsArgs) -> EventsConnection<'static> {
+fn events(args: EventsArgs) -> EventsConnectionOwned {
     let from = args.from.unwrap_or(0);
     let limit = args.limit.min(512);
 

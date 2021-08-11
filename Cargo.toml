@@ -6,6 +6,7 @@ members = [
     "xtc-history/xtc-history",
     "xtc-history/xtc-history-bucket",
     "xtc-history/xtc-history-types",
+    "xtc-history/e2e",
 ]
 
 [profile.release]

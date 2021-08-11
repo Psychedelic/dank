@@ -70,7 +70,7 @@ fn halt() {
 }
 
 #[update]
-fn finish_pending_tasks(limit: u32) {
+async fn finish_pending_tasks(limit: u32) {
     if caller() != Controller::get_principal() {
         trap("Only the controller can call this method.");
     }

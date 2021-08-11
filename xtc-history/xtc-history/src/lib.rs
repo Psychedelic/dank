@@ -4,7 +4,7 @@ use ic_cdk::export::Principal;
 use ic_cdk::trap;
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use xtc_history_types::{EventsConnection, Transaction, TransactionId};
+use xtc_history_types::{EventsConnectionOwned, Transaction, TransactionId};
 
 mod flush;
 
@@ -89,7 +89,7 @@ impl History {
     }
 
     #[inline]
-    pub fn get_transaction(&self, id: TransactionId) -> Option<&Transaction> {
+    fn get_index(&self, id: TransactionId) -> (usize, usize) {
         // 00 01 02 03 04 05             6 - 6 = 0
         // 06 07 08 09 10 11            12 - 6 = 6
         // Get(8)  -> Get(8 - (12 - 6)) -> Get(2)
@@ -107,9 +107,14 @@ impl History {
             trap("Transaction not in this canister.")
         }
 
-        // TODO(qti3e) Lookup buckets.
-
         let index = (id - tmp) as usize;
+
+        (flusher_size, index)
+    }
+
+    #[inline]
+    pub fn get_transaction(&self, id: TransactionId) -> Option<&Transaction> {
+        let (flusher_size, index) = self.get_index(id);
         if index < flusher_size {
             Some(&self.flusher.as_ref().unwrap().data[index])
         } else {
@@ -121,7 +126,10 @@ impl History {
         }
     }
 
-    pub fn events(&self, from: u64, limit: u16) -> EventsConnection {
+    pub fn events(&self, from: u64, limit: u16) -> EventsConnectionOwned {
+        let index = self.get_index(from);
+        let end_index = self.get_index(from + limit as u64);
+
         todo!()
     }
 

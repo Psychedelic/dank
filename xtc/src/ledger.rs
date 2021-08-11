@@ -71,7 +71,7 @@ impl Ledger {
 }
 
 #[update]
-pub fn balance(account: Option<Principal>) -> u64 {
+pub async fn balance(account: Option<Principal>) -> u64 {
     crate::progress().await;
     let ledger = storage::get::<Ledger>();
     ledger.balance(&account.unwrap_or_else(|| caller()))
