@@ -75,10 +75,12 @@ pub enum TransactionKind {
         to: Principal,
     },
     CanisterCalled {
+        from: Principal,
         canister: Principal,
         method_name: String,
     },
     CanisterCreated {
+        from: Principal,
         canister: Principal,
     },
     ChargingStationDeployed {
