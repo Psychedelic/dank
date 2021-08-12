@@ -1,7 +1,7 @@
 use crate::flush::{HistoryFlusher, ProgressResult};
 use ic_cdk::export::candid::CandidType;
 use ic_cdk::export::Principal;
-use ic_cdk::trap;
+use ic_cdk::{id, trap};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use xtc_history_types::{EventsConnectionOwned, Transaction, TransactionId};
@@ -127,10 +127,39 @@ impl History {
     }
 
     pub fn events(&self, from: u64, limit: u16) -> EventsConnectionOwned {
-        let index = self.get_index(from);
-        let end_index = self.get_index(from + limit as u64);
+        let limit = limit as usize + 1;
+        let (flusher_size, mut index) = self.get_index(from);
+        let mut end_index = index + limit;
+        let mut events = Vec::with_capacity(limit);
 
-        todo!()
+        if index < flusher_size {
+            let flusher_data = &self.flusher.as_ref().unwrap().data;
+            let flusher_end_index = end_index.min(flusher_size);
+
+            for i in index..flusher_end_index {
+                events.push(flusher_data[i].clone());
+            }
+
+            index = index - flusher_size;
+            end_index = end_index - flusher_size;
+        }
+
+        let data = &self.data;
+        for i in index..end_index.min(data.len()) {
+            events.push(data[i].clone());
+        }
+
+        let size = events.len();
+        events.pop();
+
+        EventsConnectionOwned {
+            data: events,
+            next_canister_id: if size == limit {
+                Some(id())
+            } else {
+                self.buckets.head
+            },
+        }
     }
 
     /// Push a new transaction to the history events log.
