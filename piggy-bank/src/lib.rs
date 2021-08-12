@@ -3,7 +3,7 @@ use ic_cdk::*;
 use ic_cdk_macros::*;
 use serde::*;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, CandidType)]
 struct PerformMintArgs {
     canister: Principal,
     account: Option<Principal>,
