@@ -76,7 +76,7 @@ pub fn balance(account: Option<Principal>) -> u64 {
     ledger.balance(&account.unwrap_or_else(|| caller()))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, CandidType)]
 struct TransferArguments {
     to: Principal,
     amount: u64,
@@ -142,7 +142,7 @@ fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
     Ok(id)
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, CandidType)]
 struct BurnArguments {
     canister_id: Principal,
     amount: u64,
