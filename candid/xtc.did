@@ -65,6 +65,7 @@ type EventDetail = variant {
         canister : principal;
     };
     ChargingStationDeployed : record {
+        from : principal;
         canister : principal;
     };
 };

@@ -84,6 +84,7 @@ pub enum TransactionKind {
         canister: Principal,
     },
     ChargingStationDeployed {
+        from: Principal,
         canister: Principal,
     },
 }
