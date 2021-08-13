@@ -46,7 +46,6 @@ impl HistoryBuffer {
             TransactionKind::Burn { .. } => CountTarget::Burn,
             TransactionKind::CanisterCalled { .. } => CountTarget::ProxyCall,
             TransactionKind::CanisterCreated { .. } => CountTarget::CanisterCreated,
-            TransactionKind::ChargingStationDeployed { .. } => unreachable!(),
         });
 
         transaction.timestamp = transaction.timestamp / 1000000;
@@ -75,13 +74,12 @@ pub enum TransactionKind {
         to: Principal,
     },
     CanisterCalled {
+        from: Principal,
         canister: Principal,
         method_name: String,
     },
     CanisterCreated {
-        canister: Principal,
-    },
-    ChargingStationDeployed {
+        from: Principal,
         canister: Principal,
     },
 }

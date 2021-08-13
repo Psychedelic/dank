@@ -60,6 +60,7 @@ async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
                 cycles,
                 fee: 0,
                 kind: TransactionKind::CanisterCalled {
+                    from: user.clone(),
                     canister: args.canister.clone(),
                     method_name: args.method_name,
                 },
@@ -148,6 +149,7 @@ async fn create_canister(args: CreateCanisterArgs) -> Result<CreateResult, Strin
                 cycles,
                 fee: 0,
                 kind: TransactionKind::CanisterCreated {
+                    from: user.clone(),
                     canister: x.canister_id,
                 },
             };
