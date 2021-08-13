@@ -428,12 +428,7 @@ impl From<TransactionKindV0> for TransactionKind {
                 from: Principal::anonymous(),
                 canister,
             },
-            TransactionKindV0::ChargingStationDeployed { canister } => {
-                TransactionKind::ChargingStationDeployed {
-                    from: Principal::anonymous(),
-                    canister,
-                }
-            }
+            TransactionKindV0::ChargingStationDeployed { canister } => unreachable!()
         }
     }
 }
@@ -495,9 +490,6 @@ pub fn post_upgrade() {
                         *from = archive_from.clone();
                     }
                     TransactionKind::CanisterCreated { from, .. } => {
-                        *from = archive_from.clone();
-                    }
-                    TransactionKind::ChargingStationDeployed { from, .. } => {
                         *from = archive_from.clone();
                     }
                 }
