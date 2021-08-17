@@ -1,3 +1,5 @@
+const { Principal } = require('@dfinity/principal');
+
 function convertStringToBigInt(text) {
   if (!text.endsWith('n')) {
     throw new Error('Not a big int string');
@@ -39,6 +41,8 @@ const convertToSerializableTransaction = (transactionResponse) => {
   if (transactionResponse.kind.CanisterCreated) {
     transactionResponse.kind.CanisterCreated.canister =
       transactionResponse.kind.CanisterCreated.canister.toText();
+    transactionResponse.kind.CanisterCreated.from =
+      transactionResponse.kind.CanisterCreated.from.toText();
 
     return transactionResponse;
   }
@@ -46,6 +50,8 @@ const convertToSerializableTransaction = (transactionResponse) => {
   if (transactionResponse.kind.CanisterCalled) {
     transactionResponse.kind.CanisterCalled.canister =
       transactionResponse.kind.CanisterCalled.canister.toText();
+    transactionResponse.kind.CanisterCalled.from =
+      transactionResponse.kind.CanisterCalled.from.toText();
 
     return transactionResponse;
   }
@@ -104,6 +110,9 @@ const convertFromSerializableTransaction = (serializableTransaction) => {
     serializableTransaction.kind.CanisterCreated.canister = Principal.fromText(
       serializableTransaction.kind.CanisterCreated.canister
     );
+    serializableTransaction.kind.CanisterCreated.from = Principal.fromText(
+      serializableTransaction.kind.CanisterCreated.from
+    );
 
     return serializableTransaction;
   }
@@ -111,6 +120,9 @@ const convertFromSerializableTransaction = (serializableTransaction) => {
   if (serializableTransaction.kind.CanisterCalled) {
     serializableTransaction.kind.CanisterCalled.canister = Principal.fromText(
       serializableTransaction.kind.CanisterCalled.canister
+    );
+    serializableTransaction.kind.CanisterCalled.from = Principal.fromText(
+      serializableTransaction.kind.CanisterCalled.from
     );
 
     return serializableTransaction;

@@ -10,8 +10,12 @@ const idlFactory = ({ IDL }) => {
     ChargingStationDeployed: IDL.Record({ canister: IDL.Principal }),
     Burn: IDL.Record({ to: IDL.Principal, from: IDL.Principal }),
     Mint: IDL.Record({ to: IDL.Principal }),
-    CanisterCreated: IDL.Record({ canister: IDL.Principal }),
+    CanisterCreated: IDL.Record({
+      from: IDL.Principal,
+      canister: IDL.Principal,
+    }),
     CanisterCalled: IDL.Record({
+      from: IDL.Principal,
       method_name: IDL.Text,
       canister: IDL.Principal,
     }),

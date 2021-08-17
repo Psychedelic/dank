@@ -13,9 +13,7 @@ const checkStats = async (xtc) => {
 
   console.log(response);
 
-  if (
-    !response.balance_greater_then_supply
-  ) {
+  if (!response.balance_greater_then_supply) {
     throw new Error('Stats check failed');
   }
 

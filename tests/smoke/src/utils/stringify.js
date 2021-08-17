@@ -8,4 +8,4 @@ function stringify(value) {
   }
 }
 
-module.exports = stringify
+module.exports = stringify;

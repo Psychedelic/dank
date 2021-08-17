@@ -12,22 +12,24 @@ const backupHistory = async (xtc) => {
   }
 
   const files = fs.readdirSync(BACKUP_DIR);
-  
-  const lastTransaction = files.length - 1
+
+  const lastTransaction = files.length - 1;
 
   const stats = await xtc.stats();
 
   const noOfTransactions = stats.history_events;
 
-  const transactionIds = Array.from(Array(Number(noOfTransactions)).keys()).slice(
-    lastTransaction + 1
-  )
+  const transactionIds = Array.from(
+    Array(Number(noOfTransactions)).keys()
+  ).slice(lastTransaction + 1);
 
-  console.log(`Starting backup of Live XTC Transaction History`)
-  console.log('')
-  console.log(`Current number of transaction in history: ${noOfTransactions}`)
+  console.log(`Starting backup of Live XTC Transaction History`);
+  console.log('');
+  console.log(`Current number of transaction in history: ${noOfTransactions}`);
   if (lastTransaction > 0) {
-    console.log(`Previously synced to transaction #${lastTransaction}, starting at the next transation`)
+    console.log(
+      `Previously synced to transaction #${lastTransaction}, starting at the next transation`
+    );
   }
 
   for (const index of transactionIds) {
