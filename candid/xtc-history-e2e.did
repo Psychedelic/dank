@@ -14,13 +14,12 @@ type EventDetail = variant {
         to   : principal;
     };
     CanisterCalled : record {
+        from : principal;
         canister : principal;
         method_name: text;
     };
     CanisterCreated : record {
-        canister : principal;
-    };
-    ChargingStationDeployed : record {
+        from : principal;
         canister : principal;
     };
 };
