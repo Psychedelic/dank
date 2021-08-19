@@ -2,6 +2,7 @@
 members = [
     "xtc",
     "piggy-bank",
+    "test-utils",
 #    History
     "xtc-history/xtc-history",
     "xtc-history/xtc-history-bucket",

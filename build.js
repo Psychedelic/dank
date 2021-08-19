@@ -27,5 +27,6 @@ function buildWasm(pkg) {
     execSync(optCommand.join(' '));
 }
 
+buildWasm('xtc-history-e2e');
 buildWasm('xtc-history-bucket');
 buildWasm('xtc');

@@ -35,7 +35,7 @@ struct CallResult {
 async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
     IsShutDown::guard();
     let user = caller();
-    if api::id() == user {
+    if api::id() == args.canister {
         return Err("Attempted to call forward on self. This is not allowed.".to_string());
     }
 
@@ -110,10 +110,6 @@ pub struct CanisterSettings {
 async fn create_canister(args: CreateCanisterArgs) -> Result<CreateResult, String> {
     IsShutDown::guard();
     let user = caller();
-    if api::id() == user {
-        return Err("Attempted to call forward on self. This is not allowed.".to_string());
-    }
-
     let ledger = storage::get_mut::<Ledger>();
     ledger
         .withdraw(&user, args.cycles)
@@ -126,7 +122,7 @@ async fn create_canister(args: CreateCanisterArgs) -> Result<CreateResult, Strin
 
     let in_arg = In {
         settings: Some(CanisterSettings {
-            controller: Some(args.controller.unwrap_or_else(|| caller())),
+            controller: Some(args.controller.unwrap_or_else(|| user)),
             compute_allocation: None,
             memory_allocation: None,
             freezing_threshold: None,
