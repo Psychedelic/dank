@@ -1,4 +1,5 @@
 use crate::flush::{HistoryFlusher, ProgressResult};
+use crate::slice_con::SliceCon;
 use ic_cdk::export::candid::CandidType;
 use ic_cdk::export::Principal;
 use ic_cdk::{id, trap};
@@ -7,6 +8,7 @@ use std::collections::BTreeMap;
 use xtc_history_types::{EventsConnectionOwned, Transaction, TransactionId};
 
 mod flush;
+mod slice_con;
 
 pub struct History {
     flusher: Option<HistoryFlusher>,
