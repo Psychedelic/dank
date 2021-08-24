@@ -56,7 +56,7 @@ async fn get_transaction(id: TransactionId) -> Option<&'static Transaction> {
 }
 
 #[query]
-fn events(args: EventsArgs) -> EventsConnectionOwned {
+fn events(args: EventsArgs) -> EventsConnection<'static> {
     let from = args.from.unwrap_or(0);
     let limit = args.limit;
 

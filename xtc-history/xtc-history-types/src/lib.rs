@@ -46,12 +46,6 @@ pub struct EventsConnection<'a> {
     pub next_canister_id: Option<Principal>,
 }
 
-#[derive(CandidType)]
-pub struct EventsConnectionOwned {
-    pub data: Vec<Transaction>,
-    pub next_canister_id: Option<Principal>,
-}
-
 pub type TransactionId = u64;
 
 #[derive(Deserialize, CandidType)]

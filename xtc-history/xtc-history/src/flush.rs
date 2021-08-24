@@ -1,4 +1,3 @@
-use crate::BucketsList;
 use ic_cdk::export::candid::{CandidType, Nat, Principal};
 use ic_cdk::*;
 use serde::Deserialize;
@@ -9,11 +8,9 @@ const BUCKET_WASM: &[u8] =
 
 pub struct HistoryFlusher {
     state: State,
-    pub(crate) data: Vec<Transaction>,
     chunk_size: usize,
     in_progress: bool,
-    cursor: usize,
-    global_cursor: TransactionId,
+    offset: TransactionId,
 }
 
 pub enum ProgressResult {
@@ -56,25 +53,27 @@ enum State {
 
 impl HistoryFlusher {
     pub fn new(
-        data: Vec<Transaction>,
-        head: Option<Principal>,
-        global_cursor: TransactionId,
+        next_event_id: TransactionId,
+        current_buffer_len: usize,
+        bucket_exists: bool,
         chunk_size: usize,
     ) -> Self {
         HistoryFlusher {
-            state: match head {
-                Some(_) => State::PushChunk,
-                None => State::CreateCanister,
+            state: match bucket_exists {
+                true => State::PushChunk,
+                false => State::CreateCanister,
             },
-            data,
             chunk_size,
-            global_cursor,
             in_progress: false,
-            cursor: 0,
+            offset: next_event_id - current_buffer_len as u64,
         }
     }
 
-    pub async fn progress(&mut self, buckets: &mut BucketsList) -> ProgressResult {
+    pub async fn progress(
+        &mut self,
+        buckets: &mut Vec<(TransactionId, Principal)>,
+        data: &mut Vec<Transaction>,
+    ) -> ProgressResult {
         if State::Done == self.state {
             return ProgressResult::Done;
         }
@@ -187,8 +186,11 @@ impl HistoryFlusher {
                 }
                 State::WriteMetadata { canister_id } => {
                     let metadata = SetBucketMetadataArgs {
-                        from: self.global_cursor,
-                        next: buckets.get_head().cloned(),
+                        from: self.offset,
+                        next: match buckets.is_empty() {
+                            true => None,
+                            false => Some(buckets[buckets.len() - 1].1.clone()),
+                        },
                     };
 
                     match api::call::call(canister_id.clone(), "set_metadata", (metadata,)).await {
@@ -202,12 +204,19 @@ impl HistoryFlusher {
                         }
                     };
 
-                    buckets.insert(canister_id, self.global_cursor);
+                    buckets.push((self.offset, canister_id));
                     self.state = State::PushChunk;
                 }
                 State::PushChunk => {
-                    let chunk = &self.data[self.cursor..self.cursor + self.chunk_size];
-                    let canister_id = buckets.get_head().cloned().unwrap();
+                    if data.len() < self.chunk_size {
+                        self.state = State::Done;
+                        break;
+                    }
+
+                    // Data we need to write.
+                    let chunk = &data[0..self.chunk_size];
+                    // The bucket canister we need to write the data to.
+                    let canister_id = buckets[buckets.len() - 1].1.clone();
 
                     match api::call::call(canister_id, "push", (chunk,)).await {
                         Ok(x) => x,
@@ -222,10 +231,10 @@ impl HistoryFlusher {
                         }
                     };
 
-                    self.cursor += self.chunk_size;
-                    self.global_cursor += self.chunk_size as TransactionId;
+                    self.offset += self.chunk_size as u64;
+                    data.drain(0..self.chunk_size);
 
-                    self.state = if self.cursor >= self.data.len() {
+                    self.state = if data.len() < self.chunk_size {
                         State::Done
                     } else {
                         State::PushChunk
