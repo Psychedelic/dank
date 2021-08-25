@@ -69,9 +69,11 @@ impl HistoryBuffer {
 }
 
 #[update]
-async fn get_transaction(id: TransactionId) -> Option<&'static Transaction> {
-    crate::progress().await;
-    storage::get::<HistoryBuffer>().history.get_transaction(id)
+async fn get_transaction(id: TransactionId) -> Option<Transaction> {
+    storage::get::<HistoryBuffer>()
+        .history
+        .get_transaction(id)
+        .await
 }
 
 #[query]

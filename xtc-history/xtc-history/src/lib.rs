@@ -1,9 +1,11 @@
 use crate::flush::{HistoryFlusher, ProgressResult};
+use ic_cdk::api::call;
 use ic_cdk::export::candid::CandidType;
 use ic_cdk::export::Principal;
 use ic_cdk::{id, trap};
 use serde::Deserialize;
 use std::collections::BTreeMap;
+use std::option::Option::Some;
 use xtc_history_types::{EventsConnection, Transaction, TransactionId};
 
 mod flush;
@@ -58,9 +60,36 @@ impl History {
         self.next_event_id
     }
 
+    /// Return the bucket that should contain the given transaction.
     #[inline]
-    pub fn get_transaction(&self, id: TransactionId) -> Option<&Transaction> {
-        todo!()
+    fn get_bucket_for(&self, id: TransactionId) -> Option<Principal> {
+        if self.buckets.is_empty() {
+            return None;
+        }
+
+        let index = match self.buckets.binary_search_by(|(x, _)| x.cmp(&id)) {
+            Ok(index) => index,
+            Err(index) => index - 1,
+        };
+
+        Some(self.buckets[index].1.clone())
+    }
+
+    #[inline]
+    pub async fn get_transaction(&self, id: TransactionId) -> Option<Transaction> {
+        let buffer_len = self.buffer.len() as u64;
+        let local_start = self.next_event_id - buffer_len;
+
+        if id >= local_start {
+            let index = (id - local_start) as usize;
+            self.buffer.get(index).cloned()
+        } else if let Some(bucket) = self.get_bucket_for(id) {
+            let (res,): (Option<Transaction>,) =
+                call::call(bucket, "get_transaction", (id,)).await.unwrap();
+            res
+        } else {
+            None
+        }
     }
 
     pub fn events(&self, from: u64, limit: u16) -> EventsConnection {
@@ -87,7 +116,10 @@ impl History {
                 next_canister_id,
             }
         } else {
-            todo!()
+            EventsConnection {
+                data: &[],
+                next_canister_id: self.get_bucket_for(from),
+            }
         }
     }
 

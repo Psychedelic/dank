@@ -50,9 +50,9 @@ async fn stabilize() {
 }
 
 #[update]
-async fn get_transaction(id: TransactionId) -> Option<&'static Transaction> {
+async fn get_transaction(id: TransactionId) -> Option<Transaction> {
     let data = storage::get_mut::<CanisterData>();
-    data.history.get_transaction(id)
+    data.history.get_transaction(id).await
 }
 
 #[query]
