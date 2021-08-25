@@ -36,13 +36,14 @@ pub struct Transaction {
 
 #[derive(Deserialize, CandidType)]
 pub struct EventsArgs {
-    pub from: Option<u64>,
+    pub offset: Option<u64>,
     pub limit: u16,
 }
 
 #[derive(CandidType)]
 pub struct EventsConnection<'a> {
-    pub data: &'a [Transaction],
+    pub data: Vec<&'a Transaction>,
+    pub next_offset: TransactionId,
     pub next_canister_id: Option<Principal>,
 }
 

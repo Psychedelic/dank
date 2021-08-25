@@ -92,13 +92,14 @@ impl History {
         }
     }
 
-    pub fn events(&self, from: u64, limit: u16) -> EventsConnection {
+    pub fn events(&self, offset: Option<u64>, limit: u16) -> EventsConnection {
+        let offset = offset.unwrap_or(self.next_event_id.checked_sub(1).unwrap_or(0));
         let buffer_len = self.buffer.len() as u64;
         let local_start = self.next_event_id - buffer_len;
 
-        if from >= local_start {
+        if offset >= local_start {
             let take = limit as usize + 1;
-            let e = (from - local_start) as usize;
+            let e = (offset - local_start) as usize;
             let s = e.checked_sub(take).unwrap_or(0);
 
             let mut data = &self.buffer[s..e];
@@ -112,13 +113,15 @@ impl History {
             };
 
             EventsConnection {
-                data,
+                data: data.into_iter().rev().collect(),
+                next_offset: offset - data.len() as u64,
                 next_canister_id,
             }
         } else {
             EventsConnection {
-                data: &[],
-                next_canister_id: self.get_bucket_for(from),
+                data: Vec::with_capacity(0),
+                next_offset: offset,
+                next_canister_id: self.get_bucket_for(offset),
             }
         }
     }

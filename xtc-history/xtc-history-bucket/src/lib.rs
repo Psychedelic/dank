@@ -4,7 +4,7 @@ use ic_cdk_macros::*;
 use serde::Deserialize;
 use xtc_history_types::*;
 
-struct BucketData {
+pub struct BucketData {
     /// The events in this bucket, smaller index means older data.
     events: Vec<Transaction>,
     /// The controller of this bucket canister, which is the `XTC` canister id.
@@ -56,9 +56,13 @@ impl BucketData {
     }
 
     #[inline]
-    pub fn events(&self, from: u64, limit: u16) -> EventsConnection {
+    pub fn events(&self, offset: Option<u64>, limit: u16) -> EventsConnection {
+        let end_offset = (self.offset.unwrap() + self.events.len() as u64)
+            .checked_sub(1)
+            .unwrap_or(0);
+        let offset = offset.unwrap_or(end_offset);
         let take = limit as usize + 1;
-        let e = self.get_index(from);
+        let e = self.get_index(offset);
         let s = e.checked_sub(take).unwrap_or(0);
 
         let mut data = &self.events[s..e];
@@ -70,7 +74,8 @@ impl BucketData {
         };
 
         EventsConnection {
-            data,
+            data: data.into_iter().rev().collect(),
+            next_offset: offset - data.len() as u64,
             next_canister_id,
         }
     }
@@ -130,6 +135,5 @@ fn get_transaction(id: TransactionId) -> Option<&'static Transaction> {
 #[query]
 fn events(args: EventsArgs) -> EventsConnection<'static> {
     let data = storage::get::<BucketData>();
-    let from = data.offset.unwrap();
-    data.events(args.from.unwrap_or(from), args.limit)
+    data.events(args.offset, args.limit)
 }

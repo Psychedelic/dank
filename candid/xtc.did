@@ -75,6 +75,7 @@ type Event = record {
 
 type EventsConnection = record {
     data            : vec Event;
+    next_offset     : TransactionId;
     next_canister_id: opt principal;
 };
 
@@ -116,7 +117,7 @@ service : {
 
     // History
     get_transaction : (id: TransactionId) -> (opt Event);
-    events : (record { from: opt nat64; limit: nat16 }) -> (EventsConnection) query;
+    events : (record { offset: opt nat64; limit: nat16 }) -> (EventsConnection) query;
 
     // Management
     halt : () -> ();

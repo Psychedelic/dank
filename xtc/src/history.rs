@@ -78,8 +78,10 @@ async fn get_transaction(id: TransactionId) -> Option<Transaction> {
 
 #[query]
 fn events(args: EventsArgs) -> EventsConnection<'static> {
-    let from = args.from.unwrap_or(0);
+    let offset = args.offset;
     let limit = args.limit.min(512);
 
-    storage::get::<HistoryBuffer>().history.events(from, limit)
+    storage::get::<HistoryBuffer>()
+        .history
+        .events(offset, limit)
 }

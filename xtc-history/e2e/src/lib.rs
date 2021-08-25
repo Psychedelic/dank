@@ -57,8 +57,8 @@ async fn get_transaction(id: TransactionId) -> Option<Transaction> {
 
 #[query]
 fn events(args: EventsArgs) -> EventsConnection<'static> {
-    let from = args.from.unwrap_or(0);
-    let limit = args.limit;
+    let offset = args.offset;
+    let limit = args.limit.min(512);
 
-    storage::get::<CanisterData>().history.events(from, limit)
+    storage::get::<CanisterData>().history.events(offset, limit)
 }
