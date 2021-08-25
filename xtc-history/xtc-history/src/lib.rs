@@ -64,7 +64,31 @@ impl History {
     }
 
     pub fn events(&self, from: u64, limit: u16) -> EventsConnection {
-        todo!()
+        let buffer_len = self.buffer.len() as u64;
+        let local_start = self.next_event_id - buffer_len;
+
+        if from >= local_start {
+            let take = limit as usize + 1;
+            let e = (from - local_start) as usize;
+            let s = e.checked_sub(take).unwrap_or(0);
+
+            let mut data = &self.buffer[s..e];
+            let next_canister_id = if data.len() > limit as usize {
+                data = &data[1..];
+                Some(id())
+            } else if self.buckets.is_empty() {
+                None
+            } else {
+                Some(self.buckets[self.buckets.len() - 1].1.clone())
+            };
+
+            EventsConnection {
+                data,
+                next_canister_id,
+            }
+        } else {
+            todo!()
+        }
     }
 
     /// Push a new transaction to the history events log.

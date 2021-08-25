@@ -10,7 +10,7 @@ struct BucketData {
     /// The controller of this bucket canister, which is the `XTC` canister id.
     controller: Option<Principal>,
     /// Actual ID of the first event in the history.
-    from: Option<TransactionId>,
+    offset: Option<TransactionId>,
     /// The next bucket canister.
     next: Option<Principal>,
 }
@@ -20,7 +20,7 @@ impl Default for BucketData {
         BucketData {
             events: Vec::with_capacity(100000),
             controller: None,
-            from: None,
+            offset: None,
             next: None,
         }
     }
@@ -34,7 +34,7 @@ impl BucketData {
 
     #[inline]
     fn get_index(&self, id: TransactionId) -> usize {
-        let from = self.from.unwrap();
+        let from = self.offset.unwrap();
 
         if id < from {
             trap("Transaction is in older buckets.");
@@ -57,17 +57,20 @@ impl BucketData {
 
     #[inline]
     pub fn events(&self, from: u64, limit: u16) -> EventsConnection {
-        let index = self.get_index(from);
-        let end = (index + limit as usize).min(self.events.len());
+        let take = limit as usize + 1;
+        let e = self.get_index(from);
+        let s = e.checked_sub(take).unwrap_or(0);
 
-        let next_canister_id = if end == self.events.len() {
-            self.next
-        } else {
+        let mut data = &self.events[s..e];
+        let next_canister_id = if data.len() > limit as usize {
+            data = &data[1..];
             Some(id())
+        } else {
+            self.next.clone()
         };
 
         EventsConnection {
-            data: &self.events[index..end],
+            data,
             next_canister_id,
         }
     }
@@ -93,7 +96,7 @@ fn metadata() -> BucketMetadata {
     BucketMetadata {
         version: 0,
         size: data.events.len(),
-        from: data.from.unwrap(),
+        from: data.offset.unwrap(),
         next: data.next,
     }
 }
@@ -106,7 +109,7 @@ fn set_metadata(meta: SetBucketMetadataArgs) {
         trap("Only the controller is allowed to call set_metadata.");
     }
 
-    data.from = Some(meta.from);
+    data.offset = Some(meta.from);
     data.next = meta.next;
 }
 
@@ -127,6 +130,6 @@ fn get_transaction(id: TransactionId) -> Option<&'static Transaction> {
 #[query]
 fn events(args: EventsArgs) -> EventsConnection<'static> {
     let data = storage::get::<BucketData>();
-    let from = data.from.unwrap();
+    let from = data.offset.unwrap();
     data.events(args.from.unwrap_or(from), args.limit)
 }
