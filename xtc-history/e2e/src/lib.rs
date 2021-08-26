@@ -1,6 +1,7 @@
 use ic_cdk::export::candid::Principal;
 use ic_cdk::{api, storage};
 use ic_cdk_macros::*;
+use xtc_history::ic::IcBackend;
 use xtc_history::History;
 use xtc_history_types::*;
 
@@ -12,7 +13,7 @@ struct CanisterData {
 impl Default for CanisterData {
     fn default() -> Self {
         CanisterData {
-            history: History::new(100, 25),
+            history: History::<Principal, IcBackend>::new(100, 25),
             cursor: 0,
         }
     }

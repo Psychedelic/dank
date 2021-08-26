@@ -41,16 +41,16 @@ pub struct EventsArgs {
 }
 
 #[derive(CandidType)]
-pub struct EventsConnection<'a> {
+pub struct EventsConnection<'a, Address = Principal> {
     pub data: Vec<&'a Transaction>,
     pub next_offset: TransactionId,
-    pub next_canister_id: Option<Principal>,
+    pub next_canister_id: Option<Address>,
 }
 
 pub type TransactionId = u64;
 
 #[derive(Deserialize, CandidType)]
-pub struct SetBucketMetadataArgs {
+pub struct SetBucketMetadataArgs<Address = Principal> {
     pub from: TransactionId,
-    pub next: Option<Principal>,
+    pub next: Option<Address>,
 }

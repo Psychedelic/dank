@@ -3,6 +3,8 @@ use ic_cdk::*;
 use ic_cdk_macros::*;
 use xtc_history::{History, HistoryArchive, HistoryArchiveBorrowed};
 
+use ic_cdk::export::Principal;
+use xtc_history::ic::IcBackend;
 pub use xtc_history_types::*;
 
 pub struct HistoryBuffer {
@@ -12,7 +14,7 @@ pub struct HistoryBuffer {
 impl Default for HistoryBuffer {
     fn default() -> Self {
         HistoryBuffer {
-            history: History::new(10_000, 2000),
+            history: History::<Principal, IcBackend>::new(10_000, 2000),
         }
     }
 }

@@ -1,4 +1,6 @@
+use crate::backend::Backend;
 use crate::flush::{HistoryFlusher, ProgressResult};
+use crate::ic::IcBackend;
 use ic_cdk::api::call;
 use ic_cdk::export::candid::CandidType;
 use ic_cdk::export::Principal;
@@ -8,53 +10,35 @@ use std::collections::BTreeMap;
 use std::option::Option::Some;
 use xtc_history_types::{EventsConnection, Transaction, TransactionId};
 
+pub mod backend;
 mod flush;
+pub mod ic;
 
-pub struct History {
+pub struct History<Address = Principal, Storage: Backend<Address> = IcBackend> {
     next_event_id: TransactionId,
     buffer: Vec<Transaction>,
-    buckets: Vec<(TransactionId, Principal)>,
-    flusher: Option<HistoryFlusher>,
+    buckets: Vec<(TransactionId, Address)>,
+    flusher: Option<HistoryFlusher<Address, Storage>>,
     // configs
     chunk_size: usize,
     flush_threshold: usize,
 }
 
 #[derive(CandidType)]
-pub struct HistoryArchiveBorrowed<'e, 'b> {
+pub struct HistoryArchiveBorrowed<'e, 'b, Address: 'b = Principal> {
     cursor: TransactionId,
     events: &'e Vec<Transaction>,
-    buckets: &'b Vec<(TransactionId, Principal)>,
+    buckets: &'b Vec<(TransactionId, Address)>,
 }
 
 #[derive(CandidType, Deserialize)]
-pub struct HistoryArchive {
+pub struct HistoryArchive<Address = Principal> {
     cursor: TransactionId,
     events: Vec<Transaction>,
-    buckets: Vec<(TransactionId, Principal)>,
+    buckets: Vec<(TransactionId, Address)>,
 }
 
-impl History {
-    pub fn new(flush_threshold: usize, chunk_size: usize) -> History {
-        assert!(
-            flush_threshold > chunk_size,
-            "Flush threshold should be larger than the chunk size"
-        );
-
-        // just to be safe. (avoid memory allocation during flush, we don't know if there is
-        // memory available or not.)
-        let extra = flush_threshold / chunk_size * 5 + 64;
-
-        History {
-            next_event_id: 0,
-            buffer: Vec::with_capacity(flush_threshold + extra),
-            buckets: Vec::with_capacity(100),
-            flusher: None,
-            chunk_size,
-            flush_threshold,
-        }
-    }
-
+impl<Address: Clone + std::cmp::PartialEq, Storage: Backend<Address>> History<Address, Storage> {
     #[inline]
     pub fn len(&self) -> u64 {
         self.next_event_id
@@ -62,7 +46,7 @@ impl History {
 
     /// Return the bucket that should contain the given transaction.
     #[inline]
-    fn get_bucket_for(&self, id: TransactionId) -> Option<Principal> {
+    fn get_bucket_for(&self, id: TransactionId) -> Option<&Address> {
         if self.buckets.is_empty() {
             return None;
         }
@@ -72,7 +56,7 @@ impl History {
             Err(index) => index - 1,
         };
 
-        Some(self.buckets[index].1.clone())
+        Some(&self.buckets[index].1)
     }
 
     #[inline]
@@ -83,16 +67,14 @@ impl History {
         if id >= local_start {
             let index = (id - local_start) as usize;
             self.buffer.get(index).cloned()
-        } else if let Some(bucket) = self.get_bucket_for(id) {
-            let (res,): (Option<Transaction>,) =
-                call::call(bucket, "get_transaction", (id,)).await.unwrap();
-            res
+        } else if let Some(canister_id) = self.get_bucket_for(id) {
+            Storage::lookup_transaction(canister_id, id).await.unwrap()
         } else {
             None
         }
     }
 
-    pub fn events(&self, offset: Option<u64>, limit: u16) -> EventsConnection {
+    pub fn events(&self, offset: Option<u64>, limit: u16) -> EventsConnection<Address> {
         let offset = offset.unwrap_or(self.next_event_id.checked_sub(1).unwrap_or(0));
         let buffer_len = self.buffer.len() as u64;
         let local_start = self.next_event_id - buffer_len;
@@ -105,7 +87,7 @@ impl History {
             let mut data = &self.buffer[s..e];
             let next_canister_id = if data.len() > limit as usize {
                 data = &data[1..];
-                Some(id())
+                Some(Storage::id())
             } else if self.buckets.is_empty() {
                 None
             } else {
@@ -121,7 +103,7 @@ impl History {
             EventsConnection {
                 data: Vec::with_capacity(0),
                 next_offset: offset,
-                next_canister_id: self.get_bucket_for(offset),
+                next_canister_id: self.get_bucket_for(offset).cloned(),
             }
         }
     }
@@ -170,9 +152,29 @@ impl History {
     }
 }
 
-impl History {
+impl<Address, Storage: Backend<Address>> History<Address, Storage> {
+    pub fn new(flush_threshold: usize, chunk_size: usize) -> History {
+        assert!(
+            flush_threshold > chunk_size,
+            "Flush threshold should be larger than the chunk size"
+        );
+
+        // just to be safe. (avoid memory allocation during flush, we don't know if there is
+        // memory available or not.)
+        let extra = flush_threshold / chunk_size * 5 + 64;
+
+        History {
+            next_event_id: 0,
+            buffer: Vec::with_capacity(flush_threshold + extra),
+            buckets: Vec::with_capacity(100),
+            flusher: None,
+            chunk_size,
+            flush_threshold,
+        }
+    }
+
     #[inline]
-    pub fn archive(&self) -> HistoryArchiveBorrowed {
+    pub fn archive(&self) -> HistoryArchiveBorrowed<Address> {
         // Prevent upgrades during an active flush.
         assert!(
             self.flusher.is_none(),
@@ -186,7 +188,7 @@ impl History {
     }
 
     #[inline]
-    pub fn load(&mut self, mut archive: HistoryArchive) {
+    pub fn load(&mut self, mut archive: HistoryArchive<Address>) {
         assert!(self.buffer.is_empty() && self.buckets.is_empty());
         self.next_event_id = archive.cursor;
         self.buffer.append(&mut archive.events);
