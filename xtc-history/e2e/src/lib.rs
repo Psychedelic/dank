@@ -3,7 +3,7 @@ use ic_cdk::{api, storage};
 use ic_cdk_macros::*;
 use xtc_history::ic::IcBackend;
 use xtc_history::History;
-use xtc_history_types::*;
+use xtc_history_common::types::*;
 
 struct CanisterData {
     history: History,

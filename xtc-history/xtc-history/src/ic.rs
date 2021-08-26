@@ -2,7 +2,7 @@ use crate::backend::*;
 use ic_cdk::api::*;
 use ic_cdk::export::candid::{encode_args, CandidType, Nat, Principal};
 use serde::Deserialize;
-use xtc_history_types::*;
+use xtc_history_common::types::*;
 
 pub struct IcBackend;
 

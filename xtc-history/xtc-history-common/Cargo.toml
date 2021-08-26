@@ -1,5 +1,5 @@
 [package]
-name = "xtc-history-types"
+name = "xtc-history-common"
 version = "0.1.0"
 authors = ["Parsa Ghadimi <parsa@fleek.co>"]
 edition = "2018"

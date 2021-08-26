@@ -1,6 +1,6 @@
 use std::future::Future;
 use std::pin::Pin;
-use xtc_history_types::*;
+use xtc_history_common::types::*;
 
 /// Type alias for the data types returned from the async methods.
 pub type Res<O> = Pin<Box<dyn Future<Output = Result<O, String>>>>;

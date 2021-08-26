@@ -1,18 +1,15 @@
 use crate::backend::Backend;
 use crate::flush::{HistoryFlusher, ProgressResult};
 use crate::ic::IcBackend;
-use ic_cdk::api::call;
 use ic_cdk::export::candid::CandidType;
 use ic_cdk::export::Principal;
-use ic_cdk::{id, trap};
 use serde::Deserialize;
-use std::collections::BTreeMap;
-use std::option::Option::Some;
-use xtc_history_types::{EventsConnection, Transaction, TransactionId};
+use xtc_history_common::types::*;
 
 pub mod backend;
 mod flush;
 pub mod ic;
+pub mod mock;
 
 pub struct History<Address = Principal, Storage: Backend<Address> = IcBackend> {
     next_event_id: TransactionId,

@@ -2,20 +2,20 @@ use ic_cdk::export::candid::{CandidType, Principal};
 use ic_cdk::*;
 use ic_cdk_macros::*;
 use serde::Deserialize;
-use xtc_history_types::*;
+use xtc_history_common::types::*;
 
-pub struct BucketData {
+pub struct BucketData<Address = Principal> {
     /// The events in this bucket, smaller index means older data.
     events: Vec<Transaction>,
     /// The controller of this bucket canister, which is the `XTC` canister id.
     controller: Option<Principal>,
     /// Actual ID of the first event in the history.
-    offset: Option<TransactionId>,
+    pub offset: Option<TransactionId>,
     /// The next bucket canister.
-    next: Option<Principal>,
+    pub next: Option<Address>,
 }
 
-impl Default for BucketData {
+impl<T> Default for BucketData<T> {
     fn default() -> Self {
         BucketData {
             events: Vec::with_capacity(100000),
@@ -26,7 +26,7 @@ impl Default for BucketData {
     }
 }
 
-impl BucketData {
+impl<T: Clone> BucketData<T> {
     #[inline]
     pub fn push(&mut self, mut events: Vec<Transaction>) {
         self.events.append(&mut events);
@@ -56,7 +56,7 @@ impl BucketData {
     }
 
     #[inline]
-    pub fn events(&self, offset: Option<u64>, limit: u16) -> EventsConnection {
+    pub fn events(&self, offset: Option<u64>, limit: u16, id: T) -> EventsConnection<T> {
         let end_offset = (self.offset.unwrap() + self.events.len() as u64)
             .checked_sub(1)
             .unwrap_or(0);
@@ -68,7 +68,7 @@ impl BucketData {
         let mut data = &self.events[s..e];
         let next_canister_id = if data.len() > limit as usize {
             data = &data[1..];
-            Some(id())
+            Some(id)
         } else {
             self.next.clone()
         };
@@ -135,5 +135,5 @@ fn get_transaction(id: TransactionId) -> Option<&'static Transaction> {
 #[query]
 fn events(args: EventsArgs) -> EventsConnection<'static> {
     let data = storage::get::<BucketData>();
-    data.events(args.offset, args.limit)
+    data.events(args.offset, args.limit, id())
 }

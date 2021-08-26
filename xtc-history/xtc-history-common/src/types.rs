@@ -41,8 +41,8 @@ pub struct EventsArgs {
 }
 
 #[derive(CandidType)]
-pub struct EventsConnection<'a, Address = Principal> {
-    pub data: Vec<&'a Transaction>,
+pub struct EventsConnection<'a, Address = Principal, Event: 'a = Transaction> {
+    pub data: Vec<&'a Event>,
     pub next_offset: TransactionId,
     pub next_canister_id: Option<Address>,
 }

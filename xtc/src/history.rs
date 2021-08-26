@@ -5,7 +5,7 @@ use xtc_history::{History, HistoryArchive, HistoryArchiveBorrowed};
 
 use ic_cdk::export::Principal;
 use xtc_history::ic::IcBackend;
-pub use xtc_history_types::*;
+pub use xtc_history_common::types::*;
 
 pub struct HistoryBuffer {
     history: History,

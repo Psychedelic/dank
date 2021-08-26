@@ -3,7 +3,7 @@ use ic_cdk::export::candid::{CandidType, Nat, Principal};
 use ic_cdk::*;
 use serde::Deserialize;
 use std::marker::PhantomData;
-use xtc_history_types::*;
+use xtc_history_common::types::*;
 
 pub struct HistoryFlusher<Address, Storage: Backend<Address>> {
     state: State<Address>,
