@@ -129,16 +129,19 @@ impl<Address, Event> BucketData<Address, Event> {
             false
         };
 
+        let (next_canister_id, next_offset) = if has_more {
+            let next_offset = bucket_offset + start as u64 + 1;
+            (Some(get_id()), next_offset)
+        } else if let Some(address) = &self.metadata.as_ref().unwrap().next {
+            (Some(address.clone()), bucket_offset)
+        } else {
+            (None, 0)
+        };
+
         EventsConnection {
             data: data.into_iter().rev().collect(),
-            next_offset: bucket_offset + start as u64,
-            next_canister_id: if has_more {
-                Some(get_id())
-            } else if let Some(address) = &self.metadata.as_ref().unwrap().next {
-                Some(address.clone())
-            } else {
-                None
-            },
+            next_offset,
+            next_canister_id,
         }
     }
 
@@ -185,5 +188,147 @@ impl<Address, Event> BucketData<Address, Event> {
     /// Return the events in this bucket.
     pub fn get_events(&self) -> &Vec<Event> {
         &self.events
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_transaction_from_offset_zero() {
+        let bucket = BucketData::<u32, u32>::new(0, vec![0, 1, 2, 3]);
+        assert_eq!(bucket.get_transaction(0), Some(&0));
+        assert_eq!(bucket.get_transaction(1), Some(&1));
+        assert_eq!(bucket.get_transaction(2), Some(&2));
+        assert_eq!(bucket.get_transaction(3), Some(&3));
+        assert_eq!(bucket.get_transaction(4), None);
+    }
+
+    #[test]
+    fn get_transaction() {
+        let bucket = BucketData::<u32, u32>::new(1, vec![1, 2, 3]);
+        assert_eq!(bucket.get_transaction(0), None);
+        assert_eq!(bucket.get_transaction(1), Some(&1));
+        assert_eq!(bucket.get_transaction(2), Some(&2));
+        assert_eq!(bucket.get_transaction(3), Some(&3));
+        assert_eq!(bucket.get_transaction(4), None);
+    }
+
+    #[test]
+    fn events_from_offset_zero() {
+        let events = (0..=10).into_iter().collect();
+        let bucket = BucketData::<u32, u32>::new(0, events);
+
+        let res = bucket.events(None, 3, || 17);
+        assert_eq!(res.data, vec![&10, &9, &8]);
+        assert_eq!(res.next_offset, 8);
+        assert_eq!(res.next_canister_id, Some(17));
+
+        let res = bucket.events(Some(11), 3, || 17);
+        assert_eq!(res.data, vec![&10, &9, &8]);
+        assert_eq!(res.next_offset, 8);
+        assert_eq!(res.next_canister_id, Some(17));
+
+        let res = bucket.events(Some(res.next_offset), 3, || 17);
+        assert_eq!(res.data, vec![&7, &6, &5]);
+        assert_eq!(res.next_offset, 5);
+        assert_eq!(res.next_canister_id, Some(17));
+
+        let res = bucket.events(Some(res.next_offset), 3, || 17);
+        assert_eq!(res.data, vec![&4, &3, &2]);
+        assert_eq!(res.next_offset, 2);
+        assert_eq!(res.next_canister_id, Some(17));
+
+        let res = bucket.events(Some(res.next_offset), 3, || 17);
+        assert_eq!(res.data, vec![&1, &0]);
+        assert_eq!(res.next_offset, 0);
+        assert_eq!(res.next_canister_id, None);
+
+        let res = bucket.events(Some(1), 3, || 17);
+        assert_eq!(res.data, vec![&0]);
+        assert_eq!(res.next_offset, 0);
+        assert_eq!(res.next_canister_id, None);
+
+        let res = bucket.events(Some(0), 3, || 17);
+        assert_eq!(res.data, Vec::<&u32>::new());
+        assert_eq!(res.next_offset, 0);
+        assert_eq!(res.next_canister_id, None);
+    }
+
+    #[test]
+    fn events() {
+        let events = (11..=20).into_iter().collect();
+        let mut bucket = BucketData::<u32, u32>::new(11, events);
+        bucket.update_next(Some(16));
+
+        assert_eq!(bucket.get_transaction(11), Some(&11));
+
+        let res = bucket.events(None, 3, || 17);
+        assert_eq!(res.data, vec![&20, &19, &18]);
+        assert_eq!(res.next_offset, 18);
+        assert_eq!(res.next_canister_id, Some(17));
+
+        let res = bucket.events(Some(res.next_offset), 3, || 17);
+        assert_eq!(res.data, vec![&17, &16, &15]);
+        assert_eq!(res.next_offset, 15);
+        assert_eq!(res.next_canister_id, Some(17));
+
+        let res = bucket.events(Some(res.next_offset), 3, || 17);
+        assert_eq!(res.data, vec![&14, &13, &12]);
+        assert_eq!(res.next_offset, 12);
+        assert_eq!(res.next_canister_id, Some(17));
+
+        let res = bucket.events(Some(res.next_offset), 3, || 17);
+        assert_eq!(res.data, vec![&11]);
+        assert_eq!(res.next_offset, 11);
+        assert_eq!(res.next_canister_id, Some(16));
+
+        let res = bucket.events(Some(13), 3, || 17);
+        assert_eq!(res.data, vec![&12, &11]);
+        assert_eq!(res.next_offset, 11);
+        assert_eq!(res.next_canister_id, Some(16));
+
+        // Test next bucket.
+
+        let events = (0..11).into_iter().collect();
+        let bucket = BucketData::<u32, u32>::new(0, events);
+
+        let res = bucket.events(Some(11), 3, || 16);
+        assert_eq!(res.data, vec![&10, &9, &8]);
+        assert_eq!(res.next_offset, 8);
+        assert_eq!(res.next_canister_id, Some(16));
+    }
+
+    #[test]
+    fn push() {
+        let mut bucket = BucketData::<u32, u32>::new(0, vec![]);
+        assert_eq!(bucket.push(0), 0);
+
+        let events = (11..=20).into_iter().collect();
+        let mut bucket = BucketData::<u32, u32>::new(11, events);
+        assert_eq!(bucket.push(21), 21);
+        assert_eq!(bucket.push(22), 22);
+    }
+
+    #[test]
+    fn remove_first() {
+        let events = (0..=20).into_iter().collect();
+        let mut bucket = BucketData::<u32, u32>::new(0, events);
+        assert_eq!(bucket.get_transaction(0), Some(&0));
+        assert_eq!(bucket.get_transaction(1), Some(&1));
+        bucket.remove_first(5);
+        assert_eq!(bucket.get_transaction(0), None);
+        assert_eq!(bucket.get_transaction(1), None);
+        assert_eq!(bucket.get_transaction(4), None);
+        assert_eq!(bucket.get_transaction(5), Some(&5));
+        assert_eq!(bucket.get_transaction(6), Some(&6));
+        bucket.remove_first(5);
+        assert_eq!(bucket.get_transaction(0), None);
+        assert_eq!(bucket.get_transaction(1), None);
+        assert_eq!(bucket.get_transaction(4), None);
+        assert_eq!(bucket.get_transaction(5), None);
+        assert_eq!(bucket.get_transaction(6), None);
+        assert_eq!(bucket.get_transaction(10), Some(&10));
     }
 }
