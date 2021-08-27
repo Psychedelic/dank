@@ -118,7 +118,7 @@ impl<Address: Clone + std::cmp::PartialEq, Storage: Backend<Address>>
                 // The bucket canister we need to write the data to.
                 let canister_id = data.get_bucket();
 
-                self.state = match Storage::write_data(canister_id, chunk).await {
+                self.state = match Storage::append_transactions(canister_id, chunk).await {
                     Ok(()) => {
                         data.remove_first(self.chunk_size);
 

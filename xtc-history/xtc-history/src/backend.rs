@@ -18,7 +18,7 @@ pub trait Backend<Address> {
 
     /// Write a batch of transactions into the given canister, the data should be sorted from
     /// older to newer.
-    fn write_data(canister_id: &Address, data: &[Transaction]) -> Res<()>;
+    fn append_transactions(canister_id: &Address, data: &[Transaction]) -> Res<()>;
 
     /// Try to retrieve the given transaction id from the given bucket canister, the bucket
     /// should contain the transaction id, otherwise it returns an Err.

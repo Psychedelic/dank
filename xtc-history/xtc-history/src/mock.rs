@@ -54,7 +54,7 @@ impl Backend<MockCanisterId> for MockBackend {
         Box::pin(async move { Ok(()) })
     }
 
-    fn write_data(canister_id: &MockCanisterId, data: &[Transaction]) -> Res<()> {
+    fn append_transactions(canister_id: &MockCanisterId, data: &[Transaction]) -> Res<()> {
         let storage = storage();
         let bucket = storage
             .get_mut(canister_id)

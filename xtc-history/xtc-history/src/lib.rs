@@ -114,7 +114,7 @@ impl<Address: Clone, Storage: Backend<Address>> History<Address, Storage> {
     }
 
     #[inline]
-    pub fn load_v0(&mut self, mut data: Vec<Transaction>) {
+    pub fn load_v0(&mut self, data: Vec<Transaction>) {
         self.data.load_v0(data)
     }
 }

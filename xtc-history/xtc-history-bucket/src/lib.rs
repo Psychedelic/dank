@@ -56,7 +56,7 @@ fn set_metadata(meta: SetBucketMetadataArgs) {
 }
 
 #[update]
-fn push(mut events: Vec<Transaction>) {
+fn append(mut events: Vec<Transaction>) {
     let data = storage::get_mut::<Data>();
     if caller() != data.controller.unwrap() {
         trap("Only the controller is allowed to call push.");

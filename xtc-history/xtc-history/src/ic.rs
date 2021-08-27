@@ -131,7 +131,7 @@ impl Backend<Principal> for IcBackend {
         })
     }
 
-    fn write_data(canister_id: &Principal, data: &[Transaction]) -> Res<()> {
+    fn append_transactions(canister_id: &Principal, data: &[Transaction]) -> Res<()> {
         let id = canister_id.clone();
         let args_result = encode_args((data,));
 
@@ -139,7 +139,7 @@ impl Backend<Principal> for IcBackend {
             let args_raw =
                 args_result.map_err(|e| format!("Failed to encode arguments: {:?}", e))?;
 
-            call::call_raw(id, "push", args_raw, 0)
+            call::call_raw(id, "append", args_raw, 0)
                 .await
                 .map_err(|(code, msg)| {
                     format!(
