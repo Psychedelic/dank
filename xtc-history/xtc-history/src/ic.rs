@@ -30,11 +30,12 @@ impl Backend<Principal> for IcBackend {
         }
 
         Box::pin(async move {
+            let mem: u64 = 4 * 1024 * 1024 * 1024;
             let in_arg = In {
                 settings: Some(CanisterSettings {
                     controller: None,
                     compute_allocation: None,
-                    memory_allocation: Some(Nat::from(4 * 1024 * 1024 * 1024)),
+                    memory_allocation: Some(Nat::from(mem)),
                     freezing_threshold: None,
                 }),
             };

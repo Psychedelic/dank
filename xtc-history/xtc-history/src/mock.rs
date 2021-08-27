@@ -4,6 +4,8 @@ use std::sync::Mutex;
 use xtc_history_common::bucket::*;
 use xtc_history_common::types::*;
 
+const MOCK_BUCKET_CAPACITY: usize = 50;
+
 pub struct MockBackend;
 pub type MockCanisterId = u32;
 
@@ -61,8 +63,13 @@ impl Backend<MockCanisterId> for MockBackend {
             .expect("Canister not found.")
             .as_mut()
             .expect("Canister code not installed.");
-        bucket.append(&mut data.into_iter().cloned().collect());
-        Box::pin(async move { Ok(()) })
+        let res = if bucket.len() + data.len() > MOCK_BUCKET_CAPACITY {
+            Err("Memory overflow.".to_string())
+        } else {
+            bucket.append(&mut data.into_iter().cloned().collect());
+            Ok(())
+        };
+        Box::pin(async move { res })
     }
 
     fn lookup_transaction(

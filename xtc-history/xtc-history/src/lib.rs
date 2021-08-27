@@ -27,7 +27,7 @@ impl<Address: Clone + std::cmp::PartialEq, Storage: Backend<Address>> History<Ad
     ///
     /// # Panics
     /// If flush threshold is smaller than the chunk size.
-    pub fn new(flush_threshold: usize, chunk_size: usize) -> History {
+    pub fn new(flush_threshold: usize, chunk_size: usize) -> Self {
         assert!(
             flush_threshold > chunk_size,
             "Flush threshold should be larger than the chunk size"
@@ -116,5 +116,76 @@ impl<Address: Clone, Storage: Backend<Address>> History<Address, Storage> {
     #[inline]
     pub fn load_v0(&mut self, data: Vec<Transaction>) {
         self.data.load_v0(data)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mock::MockBackend;
+
+    /// Generate a fake transaction with the given id, the id is inserted as the timestamp
+    /// for the transaction.
+    #[inline]
+    fn tx(id: u64) -> Transaction {
+        Transaction {
+            timestamp: id,
+            cycles: 0,
+            fee: 0,
+            kind: TransactionKind::Mint {
+                to: Principal::management_canister(),
+            },
+        }
+    }
+
+    /// We should keep the most recent n items in the main canister if the
+    /// flush_chink % chunk_size = n.
+    #[async_std::test]
+    async fn flusher_keep_most_recent() {
+        let mut history = History::<u32, MockBackend>::new(25, 10);
+
+        for i in 0..25 {
+            history.push(tx(i));
+        }
+
+        while history.progress().await {}
+
+        let archive = history.archive();
+        assert_eq!(archive.offset, 20);
+        assert_eq!(archive.events.len(), 5);
+        assert_eq!(archive.buckets.len(), 1);
+        assert_eq!(archive.buckets[0].0, 0);
+    }
+
+    /// An aggressive test which tries to prove that the flusher is always able to return the correct
+    /// data, and always has access to the entire history.
+    #[async_std::test]
+    async fn flusher() {
+        let mut history = History::<u32, MockBackend>::new(25, 10);
+
+        for i in 0..500 {
+            history.push(tx(i));
+
+            // On each update also show that the entire transaction is still available.
+            for j in 0..=i {
+                assert_eq!(history.get_transaction(j).await, Some(tx(j)));
+            }
+
+            history.progress().await;
+        }
+
+        while history.progress().await {}
+
+        // Show that the data is actually flushed and most of the data is in the external buckets.
+        assert!(history.data.len() < 25);
+        // Show that the data is distributed in more than 1 bucket.
+        // 11 * 50 = 550
+        // 10 * 50 = 500
+        // so we should have at least 10 buckets.
+        assert!(history.archive().buckets.len() > 9);
+
+        for j in 0..500 {
+            assert_eq!(history.get_transaction(j).await, Some(tx(j)));
+        }
     }
 }

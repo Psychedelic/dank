@@ -14,19 +14,19 @@ pub struct HistoryData<Address = Principal> {
 }
 
 /// A borrow of all the data required to reconstruct the HistoryData efficient to be serialized.
-#[derive(CandidType)]
+#[derive(CandidType, Debug)]
 pub struct HistoryArchiveBorrowed<'e, 'b, Address: 'b = Principal> {
-    offset: TransactionId,
-    events: &'e Vec<Transaction>,
-    buckets: &'b Vec<(TransactionId, Address)>,
+    pub offset: TransactionId,
+    pub events: &'e Vec<Transaction>,
+    pub buckets: &'b Vec<(TransactionId, Address)>,
 }
 
 /// The result of deserializing a HistoryArchiveBorrowed.
 #[derive(CandidType, Deserialize)]
 pub struct HistoryArchive<Address = Principal> {
-    offset: TransactionId,
-    events: Vec<Transaction>,
-    buckets: Vec<(TransactionId, Address)>,
+    pub offset: TransactionId,
+    pub events: Vec<Transaction>,
+    pub buckets: Vec<(TransactionId, Address)>,
 }
 
 impl<T> Default for HistoryData<T> {
