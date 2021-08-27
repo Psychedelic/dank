@@ -109,7 +109,7 @@ impl<Address: Clone, Storage: Backend<Address>> History<Address, Storage> {
     }
 
     #[inline]
-    pub fn load(&mut self, mut archive: HistoryArchive<Address>) {
+    pub fn load(&mut self, archive: HistoryArchive<Address>) {
         self.data.load(archive);
     }
 

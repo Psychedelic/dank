@@ -2,7 +2,6 @@ use crate::backend::Backend;
 use crate::data::HistoryData;
 use ic_cdk::*;
 use std::marker::PhantomData;
-use xtc_history_common::types::*;
 
 pub struct HistoryFlusher<Address, Storage: Backend<Address>> {
     state: State<Address>,

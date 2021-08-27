@@ -2,7 +2,7 @@ use ic_cdk::export::candid::CandidType;
 use ic_cdk::export::Principal;
 use serde::Deserialize;
 
-#[derive(CandidType, Clone, Deserialize)]
+#[derive(CandidType, Clone, Deserialize, PartialOrd, PartialEq, Debug)]
 pub enum TransactionKind {
     Transfer {
         from: Principal,
@@ -26,7 +26,7 @@ pub enum TransactionKind {
     },
 }
 
-#[derive(CandidType, Clone, Deserialize)]
+#[derive(CandidType, Clone, Deserialize, PartialOrd, PartialEq, Debug)]
 pub struct Transaction {
     pub timestamp: u64,
     pub cycles: u64,

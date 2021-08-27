@@ -5,7 +5,7 @@ use xtc_history_common::bucket::*;
 use xtc_history_common::types::*;
 
 pub struct MockBackend;
-pub type MockCanisterId = usize;
+pub type MockCanisterId = u32;
 
 type Map = BTreeMap<MockCanisterId, Option<BucketData<MockCanisterId>>>;
 
@@ -29,7 +29,7 @@ fn storage() -> &'static mut Map {
 impl Backend<MockCanisterId> for MockBackend {
     fn create_canister() -> Res<MockCanisterId> {
         let storage = storage();
-        let id = storage.len();
+        let id = storage.len() as u32;
         storage.insert(id, None);
         Box::pin(async move { Ok(id) })
     }
@@ -61,7 +61,7 @@ impl Backend<MockCanisterId> for MockBackend {
             .expect("Canister not found.")
             .as_mut()
             .expect("Canister code not installed.");
-        todo!();
+        bucket.append(&mut data.into_iter().cloned().collect());
         Box::pin(async move { Ok(()) })
     }
 
@@ -69,10 +69,17 @@ impl Backend<MockCanisterId> for MockBackend {
         canister_id: &MockCanisterId,
         id: TransactionId,
     ) -> Res<Option<Transaction>> {
-        todo!()
+        let storage = storage();
+        let bucket = storage
+            .get_mut(canister_id)
+            .expect("Canister not found.")
+            .as_mut()
+            .expect("Canister code not installed.");
+        let tx = bucket.get_transaction(id).cloned();
+        Box::pin(async move { Ok(tx) })
     }
 
     fn id() -> MockCanisterId {
-        todo!()
+        0
     }
 }

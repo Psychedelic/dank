@@ -217,3 +217,103 @@ impl<Address> HistoryData<Address> {
         self.bucket.append(&mut data);
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::mock::MockBackend;
+
+    /// Generate a fake transaction with the given id, the id is inserted as the timestamp
+    /// for the transaction.
+    #[inline]
+    fn tx(id: u64) -> Transaction {
+        Transaction {
+            timestamp: id,
+            cycles: 0,
+            fee: 0,
+            kind: TransactionKind::Mint {
+                to: Principal::management_canister(),
+            },
+        }
+    }
+
+    #[async_std::test]
+    async fn load_v0() {
+        let mut data = HistoryData::<u32>::default();
+        let transactions = (0..10).map(tx).collect::<Vec<Transaction>>();
+        data.load_v0(transactions);
+        assert_eq!(data.get_transaction::<MockBackend>(0).await, Some(tx(0)));
+        assert_eq!(data.push(tx(10)), 10);
+        assert_eq!(data.get_transaction::<MockBackend>(10).await, Some(tx(10)));
+    }
+
+    #[async_std::test]
+    async fn archive() {
+        let mut data = HistoryData::<u32>::default();
+
+        // Insert 10 items.
+        (0..10).map(tx).for_each(|event| {
+            data.push(event);
+        });
+        // Create a bucket at this point.
+        data.insert_bucket(17);
+        // Remove the items.
+        data.remove_first(10);
+
+        // Insert the next 10 items.
+        (10..20).map(tx).for_each(|event| {
+            data.push(event);
+        });
+        // Create a bucket at this point.
+        data.insert_bucket(18);
+        // Remove the items.
+        data.remove_first(10);
+
+        // Insert the next 10 items.
+        (20..30).map(tx).for_each(|event| {
+            data.push(event);
+        });
+
+        let transactions = (20..30).map(tx).collect::<Vec<Transaction>>();
+        let archive = data.archive();
+        assert_eq!(archive.offset, 20);
+        assert_eq!(archive.events, &transactions);
+        assert_eq!(archive.buckets, &vec![(0, 17), (10, 18)]);
+
+        assert_eq!(data.get_transaction::<MockBackend>(25).await, Some(tx(25)));
+    }
+
+    #[async_std::test]
+    async fn load() {
+        let mut data = HistoryData::<u32>::default();
+        data.load(HistoryArchive {
+            offset: 20,
+            buckets: vec![(0, 17), (10, 18)],
+            events: (20..30).map(tx).collect(),
+        });
+
+        assert_eq!(data.get_transaction::<MockBackend>(25).await, Some(tx(25)));
+    }
+
+    #[test]
+    fn get_bucket_for() {
+        let mut data = HistoryData::<u32>::default();
+        data.load(HistoryArchive {
+            offset: 30,
+            buckets: vec![(0, 17), (10, 18), (20, 19)],
+            events: (30..40).map(tx).collect(),
+        });
+
+        for i in 0..10 {
+            assert_eq!(data.get_bucket_for(i), Some(&17));
+        }
+
+        for i in 10..20 {
+            assert_eq!(data.get_bucket_for(i), Some(&18));
+        }
+
+        for i in 20..30 {
+            assert_eq!(data.get_bucket_for(i), Some(&19));
+        }
+    }
+}
