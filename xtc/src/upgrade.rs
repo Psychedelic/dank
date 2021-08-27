@@ -5,7 +5,7 @@ use crate::stats::StatsData;
 use ic_cdk::export::candid::{CandidType, Deserialize, Principal};
 use ic_cdk::*;
 use ic_cdk_macros::*;
-use xtc_history::{HistoryArchive, HistoryArchiveBorrowed};
+use xtc_history::data::{HistoryArchive, HistoryArchiveBorrowed};
 
 #[derive(CandidType, Deserialize)]
 struct StableStorageV0 {

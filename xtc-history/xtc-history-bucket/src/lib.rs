@@ -2,88 +2,26 @@ use ic_cdk::export::candid::{CandidType, Principal};
 use ic_cdk::*;
 use ic_cdk_macros::*;
 use serde::Deserialize;
+use xtc_history_common::bucket::*;
 use xtc_history_common::types::*;
 
-pub struct BucketData<Address = Principal> {
-    /// The events in this bucket, smaller index means older data.
-    events: Vec<Transaction>,
-    /// The controller of this bucket canister, which is the `XTC` canister id.
+pub struct Data {
+    bucket: BucketData,
     controller: Option<Principal>,
-    /// Actual ID of the first event in the history.
-    pub offset: Option<TransactionId>,
-    /// The next bucket canister.
-    pub next: Option<Address>,
 }
 
-impl<T> Default for BucketData<T> {
+impl Default for Data {
     fn default() -> Self {
-        BucketData {
-            events: Vec::with_capacity(100000),
+        Self {
+            bucket: BucketData::default(),
             controller: None,
-            offset: None,
-            next: None,
-        }
-    }
-}
-
-impl<T: Clone> BucketData<T> {
-    #[inline]
-    pub fn push(&mut self, mut events: Vec<Transaction>) {
-        self.events.append(&mut events);
-    }
-
-    #[inline]
-    fn get_index(&self, id: TransactionId) -> usize {
-        let from = self.offset.unwrap();
-
-        if id < from {
-            trap("Transaction is in older buckets.");
-        }
-
-        let index = (id - from) as usize;
-
-        if index >= self.events.len() {
-            trap("Transaction is in newer buckets.");
-        }
-
-        index
-    }
-
-    #[inline]
-    pub fn get_transaction(&self, id: TransactionId) -> Option<&Transaction> {
-        let index = self.get_index(id);
-        Some(&self.events[index])
-    }
-
-    #[inline]
-    pub fn events(&self, offset: Option<u64>, limit: u16, id: T) -> EventsConnection<T> {
-        let end_offset = (self.offset.unwrap() + self.events.len() as u64)
-            .checked_sub(1)
-            .unwrap_or(0);
-        let offset = offset.unwrap_or(end_offset);
-        let take = limit as usize + 1;
-        let e = self.get_index(offset);
-        let s = e.checked_sub(take).unwrap_or(0);
-
-        let mut data = &self.events[s..e];
-        let next_canister_id = if data.len() > limit as usize {
-            data = &data[1..];
-            Some(id)
-        } else {
-            self.next.clone()
-        };
-
-        EventsConnection {
-            data: data.into_iter().rev().collect(),
-            next_offset: offset - data.len() as u64,
-            next_canister_id,
         }
     }
 }
 
 #[init]
 fn init() {
-    let data = storage::get_mut::<BucketData>();
+    let data = storage::get_mut::<Data>();
     data.controller = Some(caller());
 }
 
@@ -91,49 +29,49 @@ fn init() {
 pub struct BucketMetadata {
     pub version: u64,
     pub size: usize,
-    pub from: TransactionId,
+    pub offset: TransactionId,
     pub next: Option<Principal>,
 }
 
 #[query]
 fn metadata() -> BucketMetadata {
-    let data = storage::get::<BucketData>();
+    let data = storage::get::<Data>();
     BucketMetadata {
         version: 0,
-        size: data.events.len(),
-        from: data.offset.unwrap(),
-        next: data.next,
+        size: data.bucket.len(),
+        offset: data.bucket.get_offset(),
+        next: data.bucket.get_next().cloned(),
     }
 }
 
 #[update]
 fn set_metadata(meta: SetBucketMetadataArgs) {
-    let data = storage::get_mut::<BucketData>();
+    let data = storage::get_mut::<Data>();
 
     if caller() != data.controller.unwrap() {
         trap("Only the controller is allowed to call set_metadata.");
     }
 
-    data.offset = Some(meta.from);
-    data.next = meta.next;
+    data.bucket.set_metadata(meta);
 }
 
 #[update]
-fn push(events: Vec<Transaction>) {
-    let data = storage::get_mut::<BucketData>();
+fn push(mut events: Vec<Transaction>) {
+    let data = storage::get_mut::<Data>();
     if caller() != data.controller.unwrap() {
-        trap("Only the controller is allowed to call set_metadata.");
+        trap("Only the controller is allowed to call push.");
     }
-    data.push(events);
+    data.bucket.append(&mut events);
 }
 
 #[query]
 fn get_transaction(id: TransactionId) -> Option<&'static Transaction> {
-    storage::get::<BucketData>().get_transaction(id)
+    storage::get::<Data>().bucket.get_transaction(id)
 }
 
 #[query]
 fn events(args: EventsArgs) -> EventsConnection<'static> {
-    let data = storage::get::<BucketData>();
-    data.events(args.offset, args.limit, id())
+    storage::get::<Data>()
+        .bucket
+        .events(args.offset, args.limit as usize, || id())
 }

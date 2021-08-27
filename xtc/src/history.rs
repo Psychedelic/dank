@@ -1,7 +1,8 @@
 use crate::stats::{CountTarget, StatsData};
 use ic_cdk::*;
 use ic_cdk_macros::*;
-use xtc_history::{History, HistoryArchive, HistoryArchiveBorrowed};
+use xtc_history::data::{HistoryArchive, HistoryArchiveBorrowed};
+use xtc_history::History;
 
 use ic_cdk::export::Principal;
 use xtc_history::ic::IcBackend;

@@ -1,7 +1,6 @@
 use crate::backend::Backend;
-use ic_cdk::export::candid::{CandidType, Nat, Principal};
+use crate::data::HistoryData;
 use ic_cdk::*;
-use serde::Deserialize;
 use std::marker::PhantomData;
 use xtc_history_common::types::*;
 
@@ -9,7 +8,6 @@ pub struct HistoryFlusher<Address, Storage: Backend<Address>> {
     state: State<Address>,
     chunk_size: usize,
     in_progress: bool,
-    offset: TransactionId,
     backend: PhantomData<(Address, Storage)>,
 }
 
@@ -54,12 +52,7 @@ enum State<Address> {
 impl<Address: Clone + std::cmp::PartialEq, Storage: Backend<Address>>
     HistoryFlusher<Address, Storage>
 {
-    pub fn new(
-        next_event_id: TransactionId,
-        current_buffer_len: usize,
-        bucket_exists: bool,
-        chunk_size: usize,
-    ) -> Self {
+    pub fn new(bucket_exists: bool, chunk_size: usize) -> Self {
         HistoryFlusher {
             state: match bucket_exists {
                 true => State::PushChunk,
@@ -67,16 +60,11 @@ impl<Address: Clone + std::cmp::PartialEq, Storage: Backend<Address>>
             },
             chunk_size,
             in_progress: false,
-            offset: next_event_id - current_buffer_len as u64,
             backend: PhantomData::default(),
         }
     }
 
-    pub async fn progress(
-        &mut self,
-        buckets: &mut Vec<(TransactionId, Address)>,
-        data: &mut Vec<Transaction>,
-    ) -> ProgressResult {
+    pub async fn progress(&mut self, data: &mut HistoryData<Address>) -> ProgressResult {
         if State::Done == self.state {
             return ProgressResult::Done;
         }
@@ -112,17 +100,11 @@ impl<Address: Clone + std::cmp::PartialEq, Storage: Backend<Address>>
                 };
             }
             State::WriteMetadata { canister_id } => {
-                let metadata = SetBucketMetadataArgs {
-                    from: self.offset,
-                    next: match buckets.is_empty() {
-                        true => None,
-                        false => Some(buckets[buckets.len() - 1].1.clone()),
-                    },
-                };
+                let metadata = data.get_metadata();
 
                 match Storage::write_metadata(canister_id, metadata).await {
                     Ok(()) => {
-                        buckets.push((self.offset, canister_id.clone()));
+                        data.insert_bucket(canister_id.clone());
                         self.state = State::PushChunk;
                     }
                     Err(e) => {
@@ -132,14 +114,13 @@ impl<Address: Clone + std::cmp::PartialEq, Storage: Backend<Address>>
             }
             State::PushChunk => {
                 // Data we need to write.
-                let chunk = &data[0..self.chunk_size];
+                let chunk = &data.get_events()[0..self.chunk_size];
                 // The bucket canister we need to write the data to.
-                let canister_id = &buckets[buckets.len() - 1].1;
+                let canister_id = data.get_bucket();
 
                 self.state = match Storage::write_data(canister_id, chunk).await {
                     Ok(()) => {
-                        self.offset += self.chunk_size as u64;
-                        data.drain(0..self.chunk_size);
+                        data.remove_first(self.chunk_size);
 
                         if data.len() < self.chunk_size {
                             State::Done
