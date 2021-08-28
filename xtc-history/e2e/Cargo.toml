@@ -13,6 +13,8 @@ ic-cdk-macros = "0.3.0"
 serde = { version="1.0.116", features = ["derive"] }
 serde_bytes = "0.11"
 async-std = { version="1.9.0", features = ["attributes"] }
+
+[dev-dependencies]
 ic-agent = "0.7.0"
 
 [lib]
