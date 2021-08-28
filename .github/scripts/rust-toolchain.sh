@@ -14,5 +14,4 @@ rustup default stable
 rustup target add wasm32-unknown-unknown
 
 apt-get update -y
-apt-get install -y libssl-dev
-
+apt-get install -y libssl-dev pkg-config
