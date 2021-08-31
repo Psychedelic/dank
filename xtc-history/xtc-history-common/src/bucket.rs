@@ -109,7 +109,14 @@ impl<Address, Event> BucketData<Address, Event> {
     {
         let bucket_offset = self.get_offset();
         let max = bucket_offset + self.events.len() as u64;
-        let offset = offset.unwrap_or(max).min(max);
+        let offset = offset.unwrap_or(max);
+
+        let (offset, limit) = if offset > max {
+            let d = (offset - max) as usize;
+            (max, limit.checked_sub(d).unwrap_or(0))
+        } else {
+            (offset, limit)
+        };
 
         // 0 1 2 3 4 5 6 7 8 9
         // events(6, 3) -> {5, 4, 3}
@@ -330,5 +337,41 @@ mod tests {
         assert_eq!(bucket.get_transaction(5), None);
         assert_eq!(bucket.get_transaction(6), None);
         assert_eq!(bucket.get_transaction(10), Some(&10));
+    }
+
+    #[test]
+    fn events_large_offset() {
+        let events = (0..5).into_iter().collect();
+        let bucket = BucketData::<u32, u32>::new(0, events);
+
+        let res = bucket.events(Some(5), 3, || 17);
+        assert_eq!(res.data, vec![&4, &3, &2]);
+        assert_eq!(res.next_offset, 2);
+        assert_eq!(res.next_canister_id, Some(17));
+
+        let res = bucket.events(Some(6), 3, || 17);
+        assert_eq!(res.data, vec![&4, &3]);
+        assert_eq!(res.next_offset, 3);
+        assert_eq!(res.next_canister_id, Some(17));
+
+        let res = bucket.events(Some(7), 3, || 17);
+        assert_eq!(res.data, vec![&4]);
+        assert_eq!(res.next_offset, 4);
+        assert_eq!(res.next_canister_id, Some(17));
+
+        let res = bucket.events(Some(8), 3, || 17);
+        assert_eq!(res.data.len(), 0);
+        assert_eq!(res.next_offset, 5);
+        assert_eq!(res.next_canister_id, Some(17));
+
+        let res = bucket.events(Some(9), 3, || 17);
+        assert_eq!(res.data.len(), 0);
+        assert_eq!(res.next_offset, 5);
+        assert_eq!(res.next_canister_id, Some(17));
+
+        let res = bucket.events(Some(10), 3, || 17);
+        assert_eq!(res.data.len(), 0);
+        assert_eq!(res.next_offset, 5);
+        assert_eq!(res.next_canister_id, Some(17));
     }
 }
