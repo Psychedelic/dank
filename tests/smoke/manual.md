@@ -21,7 +21,10 @@ To setup use local variables:
 xtcID=$(dfx canister id xtc)  
 walletId=$(dfx identity get-wallet)
 principalId=$(dfx identity get-principal)
-secondPrincipalId=bro5l-xidis-iohqg-kvsi4-c6pb7-2urth-gg4t6-wzyhn-w6mej-v4tga-wae
+
+dfx identity use manual-test-2
+secondPrincipalId=$(dfx identity get-principal)
+dfx identity use manual-test-1
 ```
 
 ### Mint to your account
@@ -56,6 +59,11 @@ dfx canister call xtc get_transaction "(0)"
 #     timestamp = 1_629_228_297_715 : nat64;
 #   },
 # )
+#
+# Check events
+dfx canister call xtc events "record { from= (opt 0); limit= 5: nat16 }"
+
+# Should see 1 record and the correct recort
 ```
 
 ## Check balances
@@ -70,7 +78,7 @@ dfx canister call xtc balance "(null)"
 For a non-existant account
 
 ```shell
-dfx canister call xtc balance "(opt principal \"$principalId\")"
+dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
 
 # excpect returned balance as nat64
 ```
@@ -101,7 +109,8 @@ dfx canister call xtc stats
 Transfer back to original user
 
 ```shell
-# Switch to other identity
+# Switch to other identity 
+dfx identity use manual-test-2
 
 dfx canister call xtc balance "(opt principal \"$principalId\")"
 dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
@@ -120,6 +129,10 @@ dfx canister call xtc stats
 # expect history_events to be 3
 
 dfx canister call xtc get_transaction "(2)"
+
+dfx canister call xtc events "record { from= (opt 0); limit= 5: nat16 }"
+# should show the 3 transactions, with the last transfer as the first entry, matching
+# what you get back from get_transaction
 ```
 
 Transfer 0 cycles should be rejected
@@ -155,6 +168,7 @@ dfx canister status piggy-bank
 
 # Check transaction
 dfx canister call xtc get_transaction "(3)"
+dfx canister call xtc events "record { from= (opt 0); limit= 5: nat16 }"
 ```
 
 Burn cycles you don't have:
@@ -204,6 +218,7 @@ dfx canister --no-wallet status rkp4c-7iaaa-aaaaa-aaaca-cai
 # check transaction
 dfx canister call xtc get_transaction "(4)"
 # expect from and canister props
+dfx canister call xtc events "record { from= (opt 0); limit= 10: nat16 }"
 
 dfx canister call xtc stats
 # Supply should have dropped by creation amount
@@ -263,6 +278,7 @@ dfx canister call xtc balance "(null)"
 
 dfx canister call xtc get_transaction "(5)"
 # expect transaction with from, method_name, canister
+dfx canister call xtc events "record { from= (opt 0); limit= 10: nat16 }"
 
 # check cycles are passed along
 dfx canister --no-wallet status $walletId
