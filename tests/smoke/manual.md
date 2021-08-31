@@ -9,7 +9,7 @@ dfx start
 In another tab:
 
 ```shell
-dfx deploy xtc
+dfx deploy --with-cycles 48000000000000 xtc
 dfx deploy --with-cycles 12000000000000 piggy-bank
 ```
 
@@ -29,7 +29,7 @@ dfx identity use manual-test-1
 
 ### Mint to your account
 
-```
+```shell
 # Mint into XTC based on your account, via piggy-bank
 dfx canister call piggy-bank perform_mint "(record { canister= principal \"$xtcID\"; account=null; cycles=10_000_000_000_000 })"
 
@@ -61,7 +61,7 @@ dfx canister call xtc get_transaction "(0)"
 # )
 #
 # Check events
-dfx canister call xtc events "record { from= (opt 0); limit= 5: nat16 }"
+dfx canister call xtc events "record { limit= 5: nat16 }"
 
 # Should see 1 record and the correct recort
 ```
@@ -130,7 +130,7 @@ dfx canister call xtc stats
 
 dfx canister call xtc get_transaction "(2)"
 
-dfx canister call xtc events "record { from= (opt 0); limit= 5: nat16 }"
+dfx canister call xtc events "record { limit= 5: nat16 }"
 # should show the 3 transactions, with the last transfer as the first entry, matching
 # what you get back from get_transaction
 ```
