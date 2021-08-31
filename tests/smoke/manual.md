@@ -168,7 +168,7 @@ dfx canister status piggy-bank
 
 # Check transaction
 dfx canister call xtc get_transaction "(3)"
-dfx canister call xtc events "record { from= (opt 0); limit= 5: nat16 }"
+dfx canister call xtc events "record { limit= 5: nat16 }"
 ```
 
 Burn cycles you don't have:
@@ -218,7 +218,7 @@ dfx canister --no-wallet status rkp4c-7iaaa-aaaaa-aaaca-cai
 # check transaction
 dfx canister call xtc get_transaction "(4)"
 # expect from and canister props
-dfx canister call xtc events "record { from= (opt 0); limit= 10: nat16 }"
+dfx canister call xtc events "record { limit= 10: nat16 }"
 
 dfx canister call xtc stats
 # Supply should have dropped by creation amount
@@ -312,8 +312,7 @@ dfx canister call xtc get_transaction "(100)"
 Lookup events
 
 ```shell
-dfx canister call xtc 
-
-
-dfx canister call xtc events "record { from= (opt 4); limit= 1: nat16 }"
+dfx canister call xtc events "record { limit= 1: nat16 }"
+dfx canister call xtc events "record { offset= (opt 5); limit= 3: nat16 }"
+dfx canister call rno2w-sqaaa-aaaaa-aaacq-cai events "(record { offset=120:nat64; limit= 100: nat16 })"
 ```
