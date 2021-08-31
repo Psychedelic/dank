@@ -41,6 +41,12 @@ impl<Address, Event> BucketData<Address, Event> {
         }
     }
 
+    /// Pre-reserve space for the given number of transactions.
+    #[inline]
+    pub fn reserve(&mut self, capacity: usize) {
+        self.events.reserve(capacity);
+    }
+
     /// Set the metadata for this bucket.
     /// # Panics
     /// If the metadata is already set.

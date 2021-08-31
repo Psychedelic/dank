@@ -23,6 +23,10 @@ impl Default for Data {
 fn init() {
     let data = storage::get_mut::<Data>();
     data.controller = Some(caller());
+    let size = std::mem::size_of::<Transaction>();
+    // 3.5 GB
+    let num = (3584 * 1024 * 1024) / size;
+    data.bucket.reserve(num);
 }
 
 #[derive(Deserialize, CandidType)]
