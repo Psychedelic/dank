@@ -9,6 +9,7 @@ Dank is a collection of Open Internet Services for users and developers on the I
 - [Security & Issue Reporting Policy](https://github.com/Psychedelic/dank/security/policy) 
 
 ## Main Products
+
 ### Cycles Token (XTC) - Alpha
 
 The Cycles Token (XTC) is a cycles ledger canister that provides users with a “wrapped/tokenized” version of cycles (XTC) that can be held with just a Principal ID (no need for a Cycles Wallet), and that also includes all the same developer features and functions (calls) as the Cycles Wallet (built into the XTC token itself). 
@@ -21,6 +22,17 @@ Each Cycles Token (XTC) is backed 1-to-1 with 1 Trillion Cycles **(1 XTC = 1 Tri
 
 >Dank's Cycles Token (XTC) is an Alpha product and is in active development. During this testing/development period, the Dank core team will have control over the canister's upgradeability and the "stop/halt" feature to facilitate bug and security updates, prevent malicious acts, and grow the Main Dank Canister in features.
 >When the project reaches a solid maturity level, it will transition towards a fully community-owned governance system.
+
+## Development
+
+The canisters are written in rust. To develop against them requires the rust toolchain, and node to support some build scripts; please ensure these are installed.
+
+To run the tests:
+
+```
+node build.js
+cargo test
+```
 
 ----
 
