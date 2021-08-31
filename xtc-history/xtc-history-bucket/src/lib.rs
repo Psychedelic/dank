@@ -23,8 +23,10 @@ impl Default for Data {
 fn init() {
     let data = storage::get_mut::<Data>();
     data.controller = Some(caller());
-    let size = std::mem::size_of::<Transaction>();
-    // 3.5 GB
+    // For each transaction reserve 2.5kb for heap allocated data, the size of Transaction is
+    // just the size needed to store the pointers. And is about 120 bytes.
+    let size = std::mem::size_of::<Transaction>() + 2560;
+    // 3.5 GB / ~2.5KB ~= 1.4M
     let num = (3584 * 1024 * 1024) / size;
     data.bucket.reserve(num);
 }
