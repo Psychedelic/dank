@@ -39,5 +39,8 @@ jobs:
         if: steps.target-dir-cache.outputs.cache-hit != 'true' || steps.target-clean-cache.outputs.cache-hit != 'true'
         run: cargo clean
 
+      - name: Build the WASMs
+        run: node build.js
+
       - name: Test runner
         run: cargo test

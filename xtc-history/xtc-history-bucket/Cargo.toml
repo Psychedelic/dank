@@ -1,12 +1,13 @@
 [package]
-name = "xtc"
+name = "xtc-history-bucket"
 version = "0.1.0"
 authors = ["Parsa Ghadimi <parsa@fleek.co>"]
 edition = "2018"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [dependencies]
-xtc-history = {path="../xtc-history/xtc-history"}
-xtc-history-common = {path= "../xtc-history/xtc-history-common" }
+xtc-history-common = {path= "../xtc-history-common" }
 ic-cdk = "0.3.0"
 ic-cdk-macros = "0.3.0"
 serde = { version="1.0.116", features = ["derive"] }

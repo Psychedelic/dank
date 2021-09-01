@@ -13,6 +13,12 @@
       "candid": "candid/piggy-bank.did",
       "wasm": "target/wasm32-unknown-unknown/release/piggy_bank.wasm",
       "type": "custom"
+    },
+    "history-e2e": {
+      "build": "cargo build --target wasm32-unknown-unknown --release --package xtc-history-e2e",
+      "candid": "candid/xtc-history-e2e.did",
+      "wasm": "target/wasm32-unknown-unknown/release/xtc_history_e2e.wasm",
+      "type": "custom"
     }
   },
   "defaults": {

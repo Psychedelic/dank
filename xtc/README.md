@@ -236,3 +236,17 @@ $ dfx --identity steve canister call xtc balance "(null)"
 
 That's it! We just used `balance`, `transfer`, and `withdraw` methods. This is the basic functionality of XTC. With XTC, instead
 of a wallet ID and a principal ID, you just have one principal ID that manages all of your work!
+
+# Transaction History (Events Log)
+
+To achieve scalability the XTC canister is developed to utilize multiple canisters to store its transactions
+logs when needed. Although it is using multiple canisters, the `get_transaction(txId)` method on the main
+canister is able to return all the transactions in the log.
+
+There is also the secondary method called `events` which is used to paginate the entire events log on multiple
+canisters. This method takes an optional `offset` and a `limit` and returns the transactions starting from the
+given offset and moves back in the history and returns up to `limit` number of transactions.
+
+A cursor is returned from the `events` method which contains the page you have requested for and also the next offset
+along with the next canister id you have to make the request to. When there is no more data to read `null` is returned
+for `next_canister_id`.

@@ -71,9 +71,11 @@ impl Ledger {
 }
 
 #[update]
-pub fn balance(account: Option<Principal>) -> u64 {
+pub async fn balance(account: Option<Principal>) -> u64 {
+    let user = caller();
+    crate::progress().await;
     let ledger = storage::get::<Ledger>();
-    ledger.balance(&account.unwrap_or_else(|| caller()))
+    ledger.balance(&account.unwrap_or_else(|| user))
 }
 
 #[derive(Deserialize, CandidType)]
@@ -92,9 +94,12 @@ enum TransferError {
 }
 
 #[update]
-fn transfer(args: TransferArguments) -> Result<TransactionId, TransferError> {
+async fn transfer(args: TransferArguments) -> Result<TransactionId, TransferError> {
     IsShutDown::guard();
+
     let user = caller();
+    crate::progress().await;
+
     let ledger = storage::get_mut::<Ledger>();
 
     ledger
@@ -122,9 +127,13 @@ enum MintError {
 }
 
 #[update]
-fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
+async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
     IsShutDown::guard();
-    let account = account.unwrap_or_else(|| caller());
+
+    let user = caller();
+    crate::progress().await;
+
+    let account = account.unwrap_or_else(|| user);
     let available = api::call::msg_cycles_available();
     let accepted = api::call::msg_cycles_accept(available);
 
