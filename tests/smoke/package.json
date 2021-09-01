@@ -1,0 +1,30 @@
+{
+  "name": "dank-smoke-tests",
+  "private": "true",
+  "version": "1.0.0",
+  "description": "Scripts for testing dank canisters",
+  "main": "index.js",
+  "scripts": {
+    "check:live": "node ./src/check/live.js",
+    "backup:live": "node ./src/backup/live.js",
+    "verify:live": "node ./src/verify/live.js",
+    "format": "prettier --write \"./src/**/*.{ts,tsx,js,jsx}\"",
+    "format:check": "prettier --check \"./src/**/*.{ts,tsx,js,jsx}\""
+  },
+  "keywords": [
+    "dank",
+    "xtc"
+  ],
+  "author": "",
+  "license": "GPLv3",
+  "dependencies": {
+    "@dfinity/agent": "0.9.3",
+    "@dfinity/candid": "0.9.3",
+    "@dfinity/identity": "0.9.3",
+    "@dfinity/principal": "0.9.3",
+    "node-fetch": "2.6.1"
+  },
+  "devDependencies": {
+    "prettier": "2.3.2"
+  }
+}
