@@ -40,3 +40,13 @@ To run:
 ```shell
 yarn verify:live
 ```
+
+### Whales
+
+To determine the largest holders of XTC
+
+To run:
+
+```shell
+yarn whales:live
+```
