@@ -12,6 +12,8 @@ Dank is a collection of Open Internet Services for users and developers on the I
 
 ### Cycles Token (XTC) - Alpha
 
+[![Coverage Status](https://coveralls.io/repos/github/Psychedelic/dank/badge.svg?branch=main)](https://coveralls.io/github/Psychedelic/dank?branch=main)
+
 The Cycles Token (XTC) is a cycles ledger canister that provides users with a “wrapped/tokenized” version of cycles (XTC) that can be held with just a Principal ID (no need for a Cycles Wallet), and that also includes all the same developer features and functions (calls) as the Cycles Wallet (built into the XTC token itself). 
 
 Each Cycles Token (XTC) is backed 1-to-1 with 1 Trillion Cycles **(1 XTC = 1 Trillion Cycles)**, with cycles locked in the canister. Through the XTC canister users & developers can call/perform any traditional trade cycle actions (send, deposit, withdraw, etc.), as well as proxy canister calls funded by cycles in their XTC balance (create canister, proxy calls to canister methods, topping up cycles in calls).

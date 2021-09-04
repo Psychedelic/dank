@@ -8,8 +8,8 @@ ln -s "/root/.cargo/bin" /github/home/.cargo
 
 ls -la /github/home
 
-rustup install stable
-rustup default stable
+rustup install nightly
+rustup default nightly
 
 rustup target add wasm32-unknown-unknown
 

@@ -1,14 +1,28 @@
-name: PR Test runner
+name: Dank Test/Coverage Runner
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
-  workflow_dispatch:
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  lint:
+
     runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Lint
+      run: cargo fmt --all -- --check
+
+  test:
+
+    runs-on: ubuntu-latest
+
     container:
       image: ghcr.io/psychedelic/dank-explorer-ci:latest
       credentials:
@@ -39,8 +53,25 @@ jobs:
         if: steps.target-dir-cache.outputs.cache-hit != 'true' || steps.target-clean-cache.outputs.cache-hit != 'true'
         run: cargo clean
 
-      - name: Build the WASMs
+      - name: Build
         run: node build.js
 
-      - name: Test runner
-        run: cargo test
+      - name: Cargo Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features --no-fail-fast
+        env:
+          CARGO_INCREMENTAL: '0'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+
+      - name: Collect Coverage
+        id: coverage
+        uses: actions-rs/grcov@v0.1
+
+      - name: Coveralls upload
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ${{ steps.coverage.outputs.report }}
