@@ -19,3 +19,32 @@ pub async fn progress() -> bool {
     let history = storage::get_mut::<history::HistoryBuffer>();
     history.progress().await
 }
+
+#[test]
+#[should_panic]
+fn integer_underflow_in_release_build_test() // test integer overflow in release mode
+{
+    // disable compile time checks for overflow for constant expressions
+    #![allow(arithmetic_overflow)]
+
+    let u: u8 = 0 - 1;
+    sink(u);
+}
+
+#[test]
+#[should_panic]
+fn integer_overflow_in_release_build_test() // test integer overflow in release mode
+{
+    // disable compile time checks for overflow for constant expressions
+    #![allow(arithmetic_overflow)]
+
+    let u: u8 = 255 + 1;
+    sink(u);
+}
+
+// Declarding function called sink, that has side-effects cause by the #[no_mangle]
+// attribute. A function with side-effects and the parameters will not be optimized
+// away by rustc.
+#[cfg(test)]
+#[no_mangle]
+fn sink(_: u8) {}
