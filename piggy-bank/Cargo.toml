@@ -7,9 +7,12 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ic-cdk = "0.3.0"
-ic-cdk-macros = "0.3.0"
-serde = { version="1.0.116", features = ["derive"] }
+ic-kit = "0.4.0"
+ic-cdk = "0.3.1"
+serde = { version="1.0.130", features = ["derive"] }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+async-std = { version="1.10.0", features = ["attributes"] }
 
 [lib]
 crate-type = ["cdylib"]
