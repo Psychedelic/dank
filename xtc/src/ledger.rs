@@ -1,9 +1,9 @@
 use crate::history::{HistoryBuffer, Transaction, TransactionId, TransactionKind};
 use crate::management::IsShutDown;
 use crate::stats::StatsData;
+use ic_kit::candid::CandidType;
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context, Principal};
-use ic_kit::candid::CandidType;
 use serde::*;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;

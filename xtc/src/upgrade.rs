@@ -1,10 +1,10 @@
-use crate::history::{HistoryBuffer};
+use crate::history::HistoryBuffer;
 use crate::ledger::Ledger;
 use crate::management;
 use crate::stats::StatsData;
+use ic_kit::candid::CandidType;
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context, Principal};
-use ic_kit::candid::CandidType;
 use serde::Deserialize;
 use xtc_history::data::{HistoryArchive, HistoryArchiveBorrowed};
 
@@ -52,7 +52,9 @@ pub fn pre_upgrade() {
 #[post_upgrade]
 pub fn post_upgrade() {
     let ic = get_context();
-    let (stable, ) = ic.stable_restore::<(StableStorage,)>().expect("Failed to read from stable storage.");
+    let (stable,) = ic
+        .stable_restore::<(StableStorage,)>()
+        .expect("Failed to read from stable storage.");
     ic.get_mut::<Ledger>().load(stable.ledger);
     ic.get_mut::<HistoryBuffer>().load(stable.history);
     management::Controller::load(stable.controller);

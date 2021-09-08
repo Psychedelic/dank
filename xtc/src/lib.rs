@@ -14,7 +14,7 @@ mod upgrade;
 /// be more things following this design pattern for handling tasks.
 #[inline]
 pub async fn progress() -> bool {
-    use ic_kit::{Context, get_context};
+    use ic_kit::{get_context, Context};
 
     let ic = get_context();
     let history = ic.get_mut::<history::HistoryBuffer>();

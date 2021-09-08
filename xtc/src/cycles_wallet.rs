@@ -5,7 +5,7 @@ use crate::history::{HistoryBuffer, Transaction, TransactionKind};
 use crate::ledger::Ledger;
 use crate::management::IsShutDown;
 use crate::meta::meta;
-use ic_kit::candid::{CandidType};
+use ic_kit::candid::CandidType;
 use ic_kit::interfaces::management::{
     CanisterSettings, CreateCanister, CreateCanisterArgument, WithCanisterId,
 };
@@ -54,12 +54,7 @@ async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
     let method_name = args.method_name.clone();
 
     match ic
-        .call_raw(
-            args.canister.clone(),
-            &method_name,
-            args.args,
-            args.cycles,
-        )
+        .call_raw(args.canister.clone(), &method_name, args.args, args.cycles)
         .await
     {
         Ok(x) => {
