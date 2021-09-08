@@ -5,9 +5,13 @@ use crate::history::{HistoryBuffer, Transaction, TransactionKind};
 use crate::ledger::Ledger;
 use crate::management::IsShutDown;
 use crate::meta::meta;
-use ic_cdk::export::candid::{CandidType, Nat, Principal};
-use ic_cdk::*;
-use ic_cdk_macros::*;
+use ic_kit::candid::{CandidType};
+use ic_kit::interfaces::management::{
+    CanisterSettings, CreateCanister, CreateCanisterArgument, WithCanisterId,
+};
+use ic_kit::interfaces::Method;
+use ic_kit::macros::*;
+use ic_kit::{get_context, Context, Principal};
 use serde::*;
 
 #[query]
@@ -34,48 +38,54 @@ struct CallResult {
 #[update(name = "wallet_call")]
 async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
     IsShutDown::guard();
-    let user = caller();
-    if api::id() == args.canister {
+
+    let ic = get_context();
+    let caller = ic.caller();
+
+    if ic.id() == args.canister {
         return Err("Attempted to call forward on self. This is not allowed.".to_string());
     }
 
-    let ledger = storage::get_mut::<Ledger>();
+    let ledger = ic.get_mut::<Ledger>();
     ledger
-        .withdraw(&user, args.cycles)
+        .withdraw(&caller, args.cycles)
         .map_err(|_| "Insufficient Balance".to_string())?;
 
-    match api::call::call_raw(
-        args.canister.clone(),
-        &args.method_name,
-        args.args,
-        args.cycles,
-    )
-    .await
+    let method_name = args.method_name.clone();
+
+    match ic
+        .call_raw(
+            args.canister.clone(),
+            &method_name,
+            args.args,
+            args.cycles,
+        )
+        .await
     {
         Ok(x) => {
-            let refunded = api::call::msg_cycles_refunded();
+            let refunded = ic.msg_cycles_refunded();
             let cycles = args.cycles - refunded;
             let transaction = Transaction {
-                timestamp: api::time(),
+                timestamp: ic.time(),
                 cycles,
                 fee: 0,
                 kind: TransactionKind::CanisterCalled {
-                    from: user.clone(),
+                    from: caller.clone(),
                     canister: args.canister.clone(),
                     method_name: args.method_name,
                 },
             };
 
-            storage::get_mut::<HistoryBuffer>().push(transaction);
+            ic.get_mut::<HistoryBuffer>().push(transaction);
 
             if refunded > 0 {
-                ledger.deposit(user, refunded);
+                ledger.deposit(caller, refunded);
             }
 
             Ok(CallResult { r#return: x })
         }
         Err((code, msg)) => {
-            ledger.deposit(user, args.cycles);
+            ledger.deposit(caller, args.cycles);
 
             Err(format!(
                 "An error happened during the call: {}: {}",
@@ -93,73 +103,58 @@ struct CreateCanisterArgs {
     controller: Option<Principal>,
 }
 
-#[derive(CandidType, Deserialize)]
-struct CreateResult {
-    canister_id: Principal,
-}
-
-#[derive(CandidType, Clone, Deserialize)]
-pub struct CanisterSettings {
-    pub controller: Option<Principal>,
-    pub compute_allocation: Option<Nat>,
-    pub memory_allocation: Option<Nat>,
-    pub freezing_threshold: Option<Nat>,
-}
-
 #[update(name = "wallet_create_canister")]
-async fn create_canister(args: CreateCanisterArgs) -> Result<CreateResult, String> {
+async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId, String> {
     IsShutDown::guard();
-    let user = caller();
-    let ledger = storage::get_mut::<Ledger>();
+
+    let ic = get_context();
+    let caller = ic.caller();
+
+    let ledger = ic.get_mut::<Ledger>();
     ledger
-        .withdraw(&user, args.cycles)
+        .withdraw(&caller, args.cycles)
         .map_err(|_| "Insufficient Balance".to_string())?;
 
-    #[derive(CandidType)]
-    struct In {
-        settings: Option<CanisterSettings>,
-    }
-
-    let in_arg = In {
+    let in_args = CreateCanisterArgument {
         settings: Some(CanisterSettings {
-            controller: Some(args.controller.unwrap_or_else(|| user)),
+            controllers: Some(vec![args.controller.unwrap_or(caller)]),
             compute_allocation: None,
             memory_allocation: None,
             freezing_threshold: None,
         }),
     };
 
-    let create_result = match api::call::call_with_payment::<(In,), (CreateResult,)>(
+    let create_result = match CreateCanister::perform_with_payment(
+        ic,
         Principal::management_canister(),
-        "create_canister",
-        (in_arg,),
+        (in_args,),
         args.cycles,
     )
     .await
     {
-        Ok((x,)) => {
-            let refunded = api::call::msg_cycles_refunded();
+        Ok((r,)) => {
+            let refunded = ic.msg_cycles_refunded();
             let cycles = args.cycles - refunded;
             let transaction = Transaction {
-                timestamp: api::time(),
+                timestamp: ic.time(),
                 cycles,
                 fee: 0,
                 kind: TransactionKind::CanisterCreated {
-                    from: user.clone(),
-                    canister: x.canister_id,
+                    from: caller.clone(),
+                    canister: r.canister_id,
                 },
             };
 
-            storage::get_mut::<HistoryBuffer>().push(transaction);
+            ic.get_mut::<HistoryBuffer>().push(transaction);
 
             if refunded > 0 {
-                ledger.deposit(user, refunded);
+                ledger.deposit(caller, refunded);
             }
 
-            x
+            r
         }
         Err((code, msg)) => {
-            ledger.deposit(user, args.cycles);
+            ledger.deposit(caller, args.cycles);
             return Err(format!(
                 "An error happened during the call: {}: {}",
                 code as u8, msg
@@ -177,8 +172,9 @@ struct BalanceResult {
 
 #[query]
 fn wallet_balance() -> BalanceResult {
-    let ledger = storage::get::<Ledger>();
-    let amount = ledger.balance(&caller());
+    let ic = get_context();
+    let ledger = ic.get::<Ledger>();
+    let amount = ledger.balance(&ic.caller());
     BalanceResult { amount }
 }
 
@@ -191,11 +187,13 @@ struct SendCyclesArgs {
 #[update]
 async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
     IsShutDown::guard();
-    let user = caller();
-    let ledger = storage::get_mut::<Ledger>();
+
+    let ic = get_context();
+    let caller = ic.caller();
+    let ledger = ic.get_mut::<Ledger>();
 
     ledger
-        .withdraw(&user, args.amount)
+        .withdraw(&caller, args.amount)
         .map_err(|_| String::from("Insufficient balance."))?;
 
     #[derive(CandidType)]
@@ -203,28 +201,29 @@ async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
         canister_id: Principal,
     }
 
-    let (result, refunded) = match api::call::call_with_payment(
-        args.canister.clone(),
-        "wallet_receive",
-        (),
-        args.amount.into(),
-    )
-    .await
+    let (result, refunded) = match ic
+        .call_with_payment(
+            args.canister.clone(),
+            "wallet_receive",
+            (),
+            args.amount.into(),
+        )
+        .await
     {
         Ok(()) => {
-            let refunded = api::call::msg_cycles_refunded();
+            let refunded = ic.msg_cycles_refunded();
             let cycles = args.amount - refunded;
             let transaction = Transaction {
-                timestamp: api::time(),
+                timestamp: ic.time(),
                 cycles,
                 fee: 0,
                 kind: TransactionKind::Burn {
-                    from: user.clone(),
+                    from: caller.clone(),
                     to: args.canister,
                 },
             };
 
-            storage::get_mut::<HistoryBuffer>().push(transaction);
+            ic.get_mut::<HistoryBuffer>().push(transaction);
 
             (Ok(()), refunded)
         }
@@ -232,16 +231,17 @@ async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
     };
 
     if refunded > 0 {
-        ledger.deposit(user, refunded);
+        ledger.deposit(caller, refunded);
     }
 
     result
 }
 
 #[update]
-async fn wallet_create_wallet(_: CreateCanisterArgs) -> Result<CreateResult, String> {
+async fn wallet_create_wallet(_: CreateCanisterArgs) -> Result<WithCanisterId, String> {
+    let ic = get_context();
     crate::progress().await;
-    Ok(CreateResult {
-        canister_id: api::id(),
+    Ok(WithCanisterId {
+        canister_id: ic.id(),
     })
 }

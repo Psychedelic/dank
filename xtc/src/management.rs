@@ -1,6 +1,5 @@
-use ic_cdk::export::candid::Principal;
-use ic_cdk::*;
-use ic_cdk_macros::*;
+use ic_kit::macros::*;
+use ic_kit::{get_context, Context, Principal};
 
 // --- init
 
@@ -14,12 +13,14 @@ impl Default for Controller {
 
 impl Controller {
     pub fn load(controller: Principal) {
-        let data = storage::get_mut::<Controller>();
+        let ic = get_context();
+        let data = ic.get_mut::<Controller>();
         data.0 = Some(controller);
     }
 
     pub fn load_if_not_present(controller: Principal) {
-        let data = storage::get_mut::<Controller>();
+        let ic = get_context();
+        let data = ic.get_mut::<Controller>();
         if data.0.is_none() {
             data.0 = Some(controller);
         }
@@ -27,13 +28,15 @@ impl Controller {
 
     #[inline]
     pub fn get_principal() -> Principal {
-        storage::get::<Controller>().0.unwrap().clone()
+        let ic = get_context();
+        ic.get::<Controller>().0.unwrap().clone()
     }
 }
 
 #[init]
 fn init() {
-    Controller::load_if_not_present(caller());
+    let ic = get_context();
+    Controller::load_if_not_present(ic.caller());
 }
 
 // --- halt
@@ -49,30 +52,35 @@ impl Default for IsShutDown {
 impl IsShutDown {
     #[inline]
     pub fn get() -> bool {
-        storage::get::<IsShutDown>().0
+        let ic = get_context();
+        ic.get::<IsShutDown>().0
     }
 
     #[inline]
     pub fn guard() {
         if IsShutDown::get() {
-            trap("The canister has been halted until the next code upgrade.")
+            panic!("The canister has been halted until the next code upgrade.")
         }
     }
 }
 
 #[update]
 fn halt() {
-    if caller() != Controller::get_principal() {
-        trap("Only the controller can call this method.");
+    let ic = get_context();
+
+    if ic.caller() != Controller::get_principal() {
+        panic!("Only the controller can call this method.");
     }
 
-    storage::get_mut::<IsShutDown>().0 = true;
+    ic.get_mut::<IsShutDown>().0 = true;
 }
 
 #[update]
 async fn finish_pending_tasks(limit: u32) {
-    if caller() != Controller::get_principal() {
-        trap("Only the controller can call this method.");
+    let ic = get_context();
+
+    if ic.caller() != Controller::get_principal() {
+        panic!("Only the controller can call this method.");
     }
 
     for _ in 0..limit {
