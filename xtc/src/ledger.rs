@@ -230,7 +230,7 @@ async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
 #[cfg(test)]
 mod tests {
     use super::Ledger;
-    use ic_kit::Principal;
+    use ic_kit::{Principal, MockContext};
 
     fn alice() -> Principal {
         Principal::from_text("fterm-bydaq-aaaaa-aaaaa-c").unwrap()
@@ -246,6 +246,8 @@ mod tests {
 
     #[test]
     fn balance() {
+        MockContext::new().inject();
+
         let mut ledger = Ledger::default();
         assert_eq!(ledger.balance(&alice()), 0);
         assert_eq!(ledger.balance(&bob()), 0);
