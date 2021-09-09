@@ -32,7 +32,7 @@ async fn perform_mint(args: PerformMintArgs) -> Result<u64, MintError> {
         .call_with_payment(args.canister, "mint", (Some(account),), args.cycles)
         .await
     {
-        Ok((r,)) => Ok(r),
+        Ok((r,)) => r,
         Err(e) => ic.trap(&format!("Call failed with code={:?}: {}", e.0, e.1)),
     }
 }
@@ -66,7 +66,7 @@ mod tests {
             .with_handler(
                 Method::new()
                     .expect_cycles(300)
-                    .response(17u64)
+                    .response::<Result<u64, MintError>>(Ok(17))
                     .expect_arguments((Some(&alice),)),
             )
             .inject();
@@ -87,7 +87,7 @@ mod tests {
             .with_handler(
                 Method::new()
                     .expect_cycles(140)
-                    .response(18u64)
+                    .response::<Result<u64, MintError>>(Ok(18))
                     .expect_arguments((Some(&bob),)),
             )
             .inject();
