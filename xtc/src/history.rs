@@ -1,10 +1,9 @@
 use crate::stats::{CountTarget, StatsData};
-use ic_cdk::*;
-use ic_cdk_macros::*;
+use ic_kit::macros::*;
+use ic_kit::{get_context, Context, Principal};
 use xtc_history::data::{HistoryArchive, HistoryArchiveBorrowed};
 use xtc_history::History;
 
-use ic_cdk::export::Principal;
 use xtc_history::ic::IcBackend;
 pub use xtc_history_common::types::*;
 
@@ -50,7 +49,7 @@ impl HistoryBuffer {
                 return 0;
             }
 
-            trap("Transaction is expected to have a non-zero amount.")
+            panic!("Transaction is expected to have a non-zero amount.")
         }
 
         StatsData::increment(match &transaction.kind {
@@ -73,18 +72,15 @@ impl HistoryBuffer {
 
 #[update]
 async fn get_transaction(id: TransactionId) -> Option<Transaction> {
-    storage::get::<HistoryBuffer>()
-        .history
-        .get_transaction(id)
-        .await
+    let ic = get_context();
+    ic.get::<HistoryBuffer>().history.get_transaction(id).await
 }
 
 #[query]
 fn events(args: EventsArgs) -> EventsConnection<'static> {
+    let ic = get_context();
     let offset = args.offset;
     let limit = args.limit.min(512);
 
-    storage::get::<HistoryBuffer>()
-        .history
-        .events(offset, limit)
+    ic.get::<HistoryBuffer>().history.events(offset, limit)
 }

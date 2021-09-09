@@ -1,10 +1,10 @@
 use crate::history::HistoryBuffer;
-use ic_cdk::export::candid::{CandidType, Nat};
-use ic_cdk::*;
-use ic_cdk_macros::*;
+use ic_kit::candid::{CandidType, Nat};
+use ic_kit::macros::*;
+use ic_kit::{get_context, Context};
 use serde::Deserialize;
 
-#[derive(Deserialize, CandidType, Clone)]
+#[derive(Deserialize, CandidType, Clone, Default)]
 pub struct StatsData {
     supply: Nat,
     history_events: u64,
@@ -15,21 +15,6 @@ pub struct StatsData {
     burns_count: u64,
     proxy_calls_count: u64,
     canisters_created_count: u64,
-}
-
-impl Default for StatsData {
-    fn default() -> Self {
-        StatsData {
-            supply: Nat::from(0),
-            history_events: 0,
-            balance: 0,
-            transfers_count: 0,
-            mints_count: 0,
-            burns_count: 0,
-            proxy_calls_count: 0,
-            canisters_created_count: 0,
-        }
-    }
 }
 
 pub enum CountTarget {
@@ -43,21 +28,24 @@ pub enum CountTarget {
 impl StatsData {
     #[inline]
     pub fn load(data: StatsData) {
-        let stats = storage::get_mut::<StatsData>();
+        let ic = get_context();
+        let stats = ic.get_mut::<StatsData>();
         *stats = data;
     }
 
     #[inline]
     pub fn get() -> StatsData {
-        let stats = storage::get_mut::<StatsData>();
-        stats.history_events = storage::get::<HistoryBuffer>().len() as u64;
-        stats.balance = api::canister_balance();
+        let ic = get_context();
+        let stats = ic.get_mut::<StatsData>();
+        stats.history_events = ic.get::<HistoryBuffer>().len() as u64;
+        stats.balance = ic.balance();
         stats.clone()
     }
 
     #[inline]
     pub fn increment(target: CountTarget) {
-        let stats = storage::get_mut::<StatsData>();
+        let ic = get_context();
+        let stats = ic.get_mut::<StatsData>();
         match target {
             CountTarget::Transfer => stats.transfers_count += 1,
             CountTarget::Mint => stats.mints_count += 1,
@@ -69,13 +57,15 @@ impl StatsData {
 
     #[inline]
     pub fn deposit(amount: u64) {
-        let stats = storage::get_mut::<StatsData>();
+        let ic = get_context();
+        let stats = ic.get_mut::<StatsData>();
         stats.supply += amount;
     }
 
     #[inline]
     pub fn withdraw(amount: u64) {
-        let stats = storage::get_mut::<StatsData>();
+        let ic = get_context();
+        let stats = ic.get_mut::<StatsData>();
         stats.supply -= amount;
     }
 }

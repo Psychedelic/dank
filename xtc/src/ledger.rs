@@ -1,9 +1,9 @@
 use crate::history::{HistoryBuffer, Transaction, TransactionId, TransactionKind};
 use crate::management::IsShutDown;
 use crate::stats::StatsData;
-use ic_cdk::export::candid::{CandidType, Principal};
-use ic_cdk::*;
-use ic_cdk_macros::*;
+use ic_kit::candid::CandidType;
+use ic_kit::macros::*;
+use ic_kit::{get_context, Context, Principal};
 use serde::*;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -72,10 +72,11 @@ impl Ledger {
 
 #[update]
 pub async fn balance(account: Option<Principal>) -> u64 {
-    let user = caller();
+    let ic = get_context();
+    let caller = ic.caller();
     crate::progress().await;
-    let ledger = storage::get::<Ledger>();
-    ledger.balance(&account.unwrap_or_else(|| user))
+    let ledger = ic.get::<Ledger>();
+    ledger.balance(&account.unwrap_or(caller))
 }
 
 #[derive(Deserialize, CandidType)]
@@ -97,27 +98,29 @@ enum TransferError {
 async fn transfer(args: TransferArguments) -> Result<TransactionId, TransferError> {
     IsShutDown::guard();
 
-    let user = caller();
+    let ic = get_context();
+    let caller = ic.caller();
+
     crate::progress().await;
 
-    let ledger = storage::get_mut::<Ledger>();
+    let ledger = ic.get_mut::<Ledger>();
 
     ledger
-        .withdraw(&user, args.amount)
+        .withdraw(&caller, args.amount)
         .map_err(|_| TransferError::InsufficientBalance)?;
     ledger.deposit(args.to, args.amount);
 
     let transaction = Transaction {
-        timestamp: api::time(),
+        timestamp: ic.time(),
         cycles: args.amount,
         fee: 0,
         kind: TransactionKind::Transfer {
-            from: user,
+            from: caller,
             to: args.to,
         },
     };
 
-    let id = storage::get_mut::<HistoryBuffer>().push(transaction);
+    let id = ic.get_mut::<HistoryBuffer>().push(transaction);
     Ok(id)
 }
 
@@ -130,24 +133,26 @@ enum MintError {
 async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
     IsShutDown::guard();
 
-    let user = caller();
+    let ic = get_context();
+    let caller = ic.caller();
+
     crate::progress().await;
 
-    let account = account.unwrap_or_else(|| user);
-    let available = api::call::msg_cycles_available();
-    let accepted = api::call::msg_cycles_accept(available);
+    let account = account.unwrap_or(caller);
+    let available = ic.msg_cycles_available();
+    let accepted = ic.msg_cycles_accept(available);
 
-    let ledger = storage::get_mut::<Ledger>();
+    let ledger = ic.get_mut::<Ledger>();
     ledger.deposit(account.clone(), accepted);
 
     let transaction = Transaction {
-        timestamp: api::time(),
+        timestamp: ic.time(),
         cycles: accepted,
         fee: 0,
         kind: TransactionKind::Mint { to: account },
     };
 
-    let id = storage::get_mut::<HistoryBuffer>().push(transaction);
+    let id = ic.get_mut::<HistoryBuffer>().push(transaction);
     Ok(id)
 }
 
@@ -167,11 +172,14 @@ enum BurnError {
 #[update]
 async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
     IsShutDown::guard();
-    let user = caller();
-    let ledger = storage::get_mut::<Ledger>();
+
+    let ic = get_context();
+    let caller = ic.caller();
+
+    let ledger = ic.get_mut::<Ledger>();
 
     ledger
-        .withdraw(&user, args.amount)
+        .withdraw(&caller, args.amount)
         .map_err(|_| BurnError::InsufficientBalance)?;
 
     #[derive(CandidType)]
@@ -183,28 +191,29 @@ async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
         canister_id: args.canister_id,
     };
 
-    let (result, refunded) = match api::call::call_with_payment(
-        Principal::management_canister(),
-        "deposit_cycles",
-        (deposit_cycles_arg,),
-        args.amount.into(),
-    )
-    .await
+    let (result, refunded) = match ic
+        .call_with_payment(
+            Principal::management_canister(),
+            "deposit_cycles",
+            (deposit_cycles_arg,),
+            args.amount.into(),
+        )
+        .await
     {
         Ok(()) => {
-            let refunded = api::call::msg_cycles_refunded();
+            let refunded = ic.msg_cycles_refunded();
             let cycles = args.amount - refunded;
             let transaction = Transaction {
-                timestamp: api::time(),
+                timestamp: ic.time(),
                 cycles,
                 fee: 0,
                 kind: TransactionKind::Burn {
-                    from: user.clone(),
+                    from: caller.clone(),
                     to: args.canister_id,
                 },
             };
 
-            let id = storage::get_mut::<HistoryBuffer>().push(transaction);
+            let id = ic.get_mut::<HistoryBuffer>().push(transaction);
 
             (Ok(id), refunded)
         }
@@ -212,7 +221,7 @@ async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
     };
 
     if refunded > 0 {
-        ledger.deposit(user, refunded);
+        ledger.deposit(caller, refunded);
     }
 
     result
@@ -221,7 +230,7 @@ async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
 #[cfg(test)]
 mod tests {
     use super::Ledger;
-    use ic_cdk::export::candid::Principal;
+    use ic_kit::{MockContext, Principal};
 
     fn alice() -> Principal {
         Principal::from_text("fterm-bydaq-aaaaa-aaaaa-c").unwrap()
@@ -237,6 +246,8 @@ mod tests {
 
     #[test]
     fn balance() {
+        MockContext::new().inject();
+
         let mut ledger = Ledger::default();
         assert_eq!(ledger.balance(&alice()), 0);
         assert_eq!(ledger.balance(&bob()), 0);

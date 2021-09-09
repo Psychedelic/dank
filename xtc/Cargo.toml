@@ -7,10 +7,14 @@ edition = "2018"
 [dependencies]
 xtc-history = {path="../xtc-history/xtc-history"}
 xtc-history-common = {path= "../xtc-history/xtc-history-common" }
-ic-cdk = "0.3.0"
-ic-cdk-macros = "0.3.0"
-serde = { version="1.0.116", features = ["derive"] }
 serde_bytes = "0.11"
+ic-kit = "0.4.1"
+ic-cdk = "0.3.1"
+serde = { version="1.0.130", features = ["derive"] }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+async-std = { version="1.10.0", features = ["attributes"] }
+
 
 [lib]
 crate-type = ["cdylib"]
