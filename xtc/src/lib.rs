@@ -1,4 +1,5 @@
 mod cycles_wallet;
+mod fee;
 mod history;
 mod ledger;
 mod management;

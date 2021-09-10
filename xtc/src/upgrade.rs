@@ -1,12 +1,20 @@
 use crate::history::HistoryBuffer;
 use crate::ledger::Ledger;
 use crate::management;
-use crate::stats::StatsData;
+use crate::stats::{StatsData, StatsDataV0};
 use ic_kit::candid::CandidType;
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context, Principal};
 use serde::Deserialize;
 use xtc_history::data::{HistoryArchive, HistoryArchiveBorrowed};
+
+#[derive(CandidType, Deserialize)]
+struct StableStorageV0 {
+    ledger: Vec<(Principal, u64)>,
+    history: HistoryArchive,
+    controller: Principal,
+    stats: StatsDataV0,
+}
 
 #[derive(CandidType)]
 struct StableStorageBorrowed<'h> {
@@ -53,10 +61,10 @@ pub fn pre_upgrade() {
 pub fn post_upgrade() {
     let ic = get_context();
     let (stable,) = ic
-        .stable_restore::<(StableStorage,)>()
+        .stable_restore::<(StableStorageV0,)>()
         .expect("Failed to read from stable storage.");
     ic.get_mut::<Ledger>().load(stable.ledger);
     ic.get_mut::<HistoryBuffer>().load(stable.history);
     management::Controller::load(stable.controller);
-    StatsData::load(stable.stats);
+    StatsData::load(stable.stats.into());
 }

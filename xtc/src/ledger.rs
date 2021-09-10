@@ -1,3 +1,4 @@
+use crate::fee::compute_fee;
 use crate::history::{HistoryBuffer, Transaction, TransactionId, TransactionKind};
 use crate::management::IsShutDown;
 use crate::stats::StatsData;
@@ -103,17 +104,17 @@ async fn transfer(args: TransferArguments) -> Result<TransactionId, TransferErro
 
     crate::progress().await;
 
+    let fee = compute_fee(args.amount);
     let ledger = ic.get_mut::<Ledger>();
-
     ledger
-        .withdraw(&caller, args.amount)
+        .withdraw(&caller, args.amount + fee)
         .map_err(|_| TransferError::InsufficientBalance)?;
     ledger.deposit(args.to, args.amount);
 
     let transaction = Transaction {
         timestamp: ic.time(),
         cycles: args.amount,
-        fee: 0,
+        fee,
         kind: TransactionKind::Transfer {
             from: caller,
             to: args.to,
@@ -141,14 +142,16 @@ async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
     let account = account.unwrap_or(caller);
     let available = ic.msg_cycles_available();
     let accepted = ic.msg_cycles_accept(available);
+    let fee = compute_fee(accepted).min(accepted);
+    let cycles = accepted - fee;
 
     let ledger = ic.get_mut::<Ledger>();
-    ledger.deposit(account.clone(), accepted);
+    ledger.deposit(account.clone(), cycles);
 
     let transaction = Transaction {
         timestamp: ic.time(),
-        cycles: accepted,
-        fee: 0,
+        cycles,
+        fee,
         kind: TransactionKind::Mint { to: account },
     };
 
@@ -176,8 +179,8 @@ async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
     let ic = get_context();
     let caller = ic.caller();
 
+    let deduced_fee = compute_fee(args.amount);
     let ledger = ic.get_mut::<Ledger>();
-
     ledger
         .withdraw(&caller, args.amount)
         .map_err(|_| BurnError::InsufficientBalance)?;
@@ -203,10 +206,12 @@ async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
         Ok(()) => {
             let refunded = ic.msg_cycles_refunded();
             let cycles = args.amount - refunded;
+            let actual_fee = compute_fee(cycles);
+            let refunded = refunded + (deduced_fee - actual_fee);
             let transaction = Transaction {
                 timestamp: ic.time(),
                 cycles,
-                fee: 0,
+                fee: actual_fee,
                 kind: TransactionKind::Burn {
                     from: caller.clone(),
                     to: args.canister_id,
@@ -217,7 +222,10 @@ async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
 
             (Ok(id), refunded)
         }
-        Err(_) => (Err(BurnError::InvalidTokenContract), args.amount),
+        Err(_) => (
+            Err(BurnError::InvalidTokenContract),
+            args.amount + deduced_fee,
+        ),
     };
 
     if refunded > 0 {

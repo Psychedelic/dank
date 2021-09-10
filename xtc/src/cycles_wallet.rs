@@ -1,6 +1,7 @@
 //! Contains source codes related to making Dank compatible with cycles wallet so it can be used
 //! by the dfx command line.
 
+use crate::fee::compute_fee;
 use crate::history::{HistoryBuffer, Transaction, TransactionKind};
 use crate::ledger::Ledger;
 use crate::management::IsShutDown;
@@ -46,6 +47,7 @@ async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
         return Err("Attempted to call forward on self. This is not allowed.".to_string());
     }
 
+    let deduced_fee = compute_fee(args.cycles);
     let ledger = ic.get_mut::<Ledger>();
     ledger
         .withdraw(&caller, args.cycles)
@@ -60,10 +62,12 @@ async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
         Ok(x) => {
             let refunded = ic.msg_cycles_refunded();
             let cycles = args.cycles - refunded;
+            let actual_fee = compute_fee(cycles);
+            let refunded = refunded + (deduced_fee - actual_fee);
             let transaction = Transaction {
                 timestamp: ic.time(),
                 cycles,
-                fee: 0,
+                fee: actual_fee,
                 kind: TransactionKind::CanisterCalled {
                     from: caller.clone(),
                     canister: args.canister.clone(),
@@ -80,8 +84,7 @@ async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
             Ok(CallResult { r#return: x })
         }
         Err((code, msg)) => {
-            ledger.deposit(caller, args.cycles);
-
+            ledger.deposit(caller, args.cycles + deduced_fee);
             Err(format!(
                 "An error happened during the call: {}: {}",
                 code as u8, msg
@@ -105,6 +108,7 @@ async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId, Str
     let ic = get_context();
     let caller = ic.caller();
 
+    let deduced_fee = compute_fee(args.cycles);
     let ledger = ic.get_mut::<Ledger>();
     ledger
         .withdraw(&caller, args.cycles)
@@ -130,10 +134,12 @@ async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId, Str
         Ok((r,)) => {
             let refunded = ic.msg_cycles_refunded();
             let cycles = args.cycles - refunded;
+            let actual_fee = compute_fee(cycles);
+            let refunded = refunded + (deduced_fee - actual_fee);
             let transaction = Transaction {
                 timestamp: ic.time(),
                 cycles,
-                fee: 0,
+                fee: actual_fee,
                 kind: TransactionKind::CanisterCreated {
                     from: caller.clone(),
                     canister: r.canister_id,
@@ -149,7 +155,7 @@ async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId, Str
             r
         }
         Err((code, msg)) => {
-            ledger.deposit(caller, args.cycles);
+            ledger.deposit(caller, args.cycles + deduced_fee);
             return Err(format!(
                 "An error happened during the call: {}: {}",
                 code as u8, msg
@@ -185,8 +191,9 @@ async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
 
     let ic = get_context();
     let caller = ic.caller();
-    let ledger = ic.get_mut::<Ledger>();
 
+    let deduced_fee = compute_fee(args.amount);
+    let ledger = ic.get_mut::<Ledger>();
     ledger
         .withdraw(&caller, args.amount)
         .map_err(|_| String::from("Insufficient balance."))?;
@@ -208,10 +215,12 @@ async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
         Ok(()) => {
             let refunded = ic.msg_cycles_refunded();
             let cycles = args.amount - refunded;
+            let actual_fee = compute_fee(cycles);
+            let refunded = refunded + (deduced_fee - actual_fee);
             let transaction = Transaction {
                 timestamp: ic.time(),
                 cycles,
-                fee: 0,
+                fee: actual_fee,
                 kind: TransactionKind::Burn {
                     from: caller.clone(),
                     to: args.canister,
@@ -222,7 +231,7 @@ async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
 
             (Ok(()), refunded)
         }
-        Err(_) => (Err("Call failed.".into()), args.amount),
+        Err(_) => (Err("Call failed.".into()), args.amount + deduced_fee),
     };
 
     if refunded > 0 {
