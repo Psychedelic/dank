@@ -19,7 +19,7 @@ fn reset_ledger(ctx: &mut MockContext) {
 }
 
 /// General method to test the behaviour of fee implementation of methods.
-async fn test_fee<T: CandidType + Clone, O, E: Debug>(
+async fn test_with_call_fee<T: CandidType + Clone, O, E: Debug>(
     response: T,
     cb: Box<dyn Fn(u64) -> Pin<Box<dyn Future<Output = Result<O, E>>>>>,
 ) {
@@ -74,7 +74,7 @@ async fn test_fee<T: CandidType + Clone, O, E: Debug>(
 #[async_test]
 async fn wallet_call_fee() {
     use crate::cycles_wallet::*;
-    test_fee(
+    test_with_call_fee(
         (),
         Box::new(|cycles| {
             Box::pin(async move {
@@ -94,7 +94,7 @@ async fn wallet_call_fee() {
 #[async_test]
 async fn create_canister_fee() {
     use crate::cycles_wallet::*;
-    test_fee(
+    test_with_call_fee(
         WithCanisterId {
             canister_id: mock_principals::xtc(),
         },
@@ -114,7 +114,7 @@ async fn create_canister_fee() {
 #[async_test]
 async fn send_fee() {
     use crate::cycles_wallet::*;
-    test_fee(
+    test_with_call_fee(
         (),
         Box::new(|cycles| {
             Box::pin(async move {
@@ -127,4 +127,67 @@ async fn send_fee() {
         }),
     )
     .await;
+}
+
+#[async_test]
+async fn burn_fee() {
+    use crate::ledger::*;
+    test_with_call_fee(
+        (),
+        Box::new(|cycles| {
+            Box::pin(async move {
+                burn(BurnArguments {
+                    canister_id: mock_principals::xtc(),
+                    amount: cycles,
+                })
+                .await
+            })
+        }),
+    )
+    .await;
+}
+
+#[async_test]
+async fn transfer_fee() {
+    use crate::ledger::*;
+
+    let ctx = MockContext::new()
+        .with_caller(mock_principals::alice())
+        .inject();
+
+    reset_ledger(ctx);
+
+    transfer(TransferArguments {
+        to: mock_principals::bob(),
+        amount: 5000,
+    })
+    .await
+    .expect("Unexpected error.");
+
+    assert_eq!(
+        ctx.get::<Ledger>().balance(&mock_principals::alice()),
+        10_000_000_000_000 - 5_000 - compute_fee(5_000)
+    );
+
+    assert_eq!(
+        ctx.get::<Ledger>().balance(&mock_principals::bob()),
+        10_000_000_000_000 + 5_000
+    );
+}
+
+#[async_test]
+async fn mint_fee() {
+    use crate::ledger::*;
+
+    let ctx = MockContext::new()
+        .with_caller(mock_principals::alice())
+        .with_msg_cycles(50_000_000_000)
+        .inject();
+
+    mint(None).await.expect("Unexpected error.");
+
+    assert_eq!(
+        ctx.get::<Ledger>().balance(&mock_principals::alice()),
+        50_000_000_000 - compute_fee(50_000_000_000)
+    );
 }
