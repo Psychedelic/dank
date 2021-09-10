@@ -50,7 +50,7 @@ async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
     let deduced_fee = compute_fee(args.cycles);
     let ledger = ic.get_mut::<Ledger>();
     ledger
-        .withdraw(&caller, args.cycles)
+        .withdraw(&caller, args.cycles + deduced_fee)
         .map_err(|_| "Insufficient Balance".to_string())?;
 
     let method_name = args.method_name.clone();
@@ -111,7 +111,7 @@ async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId, Str
     let deduced_fee = compute_fee(args.cycles);
     let ledger = ic.get_mut::<Ledger>();
     ledger
-        .withdraw(&caller, args.cycles)
+        .withdraw(&caller, args.cycles + deduced_fee)
         .map_err(|_| "Insufficient Balance".to_string())?;
 
     let in_args = CreateCanisterArgument {
@@ -195,7 +195,7 @@ async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
     let deduced_fee = compute_fee(args.amount);
     let ledger = ic.get_mut::<Ledger>();
     ledger
-        .withdraw(&caller, args.amount)
+        .withdraw(&caller, args.amount + deduced_fee)
         .map_err(|_| String::from("Insufficient balance."))?;
 
     #[derive(CandidType)]
@@ -248,4 +248,94 @@ async fn wallet_create_wallet(_: CreateCanisterArgs) -> Result<WithCanisterId, S
     Ok(WithCanisterId {
         canister_id: ic.id(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ledger::Ledger;
+    use ic_kit::{
+        async_test, mock_principals, CallHandler, Context, MockContext, RawHandler, RejectionCode,
+    };
+
+    /// Init a mock ledger that sets an initial 10TC balance for alice, bob, john.
+    fn init_ledger(ctx: &mut MockContext) {
+        let ledger = ctx.get_mut::<Ledger>();
+        ledger.deposit(mock_principals::alice(), 10_000_000_000);
+        ledger.deposit(mock_principals::bob(), 10_000_000_000);
+        ledger.deposit(mock_principals::john(), 10_000_000_000);
+    }
+
+    #[async_test]
+    async fn wallet_call_fee() {
+        use crate::cycles_wallet::{call, CallCanisterArgs};
+
+        // Create a context that has an inter-canister call handler which accepts upto 2_000 cycles
+        // on every call.
+        let ctx = MockContext::new()
+            .with_consume_cycles_handler(2_000)
+            .with_caller(mock_principals::alice())
+            .inject();
+
+        init_ledger(ctx);
+
+        call(CallCanisterArgs {
+            canister: mock_principals::john(),
+            method_name: "xxx".to_string(),
+            args: vec![],
+            cycles: 1_000,
+        })
+        .await
+        .expect("Unexpected failure.");
+        ctx.call_state_reset();
+
+        assert_eq!(
+            ctx.get::<Ledger>().balance(&mock_principals::alice()),
+            10_000_000_000 - 1_000 - compute_fee(1_000)
+        );
+
+        // Test when there is a refund.
+        ctx.update_caller(mock_principals::bob());
+
+        call(CallCanisterArgs {
+            canister: mock_principals::john(),
+            method_name: "xxx".to_string(),
+            args: vec![],
+            cycles: 2_500,
+        })
+        .await
+        .expect("Unexpected failure.");
+        ctx.call_state_reset();
+
+        assert_eq!(
+            ctx.get::<Ledger>().balance(&mock_principals::bob()),
+            10_000_000_000 - 2_000 - compute_fee(2_000)
+        );
+
+        // Test when the call fails
+        ctx.update_caller(mock_principals::john());
+        ctx.clear_handlers();
+        ctx.use_handler(RawHandler::raw(Box::new(|_, _, _, _| {
+            Err((
+                RejectionCode::DestinationInvalid,
+                "Canister not found.".into(),
+            ))
+        })));
+
+        call(CallCanisterArgs {
+            canister: mock_principals::john(),
+            method_name: "xxx".to_string(),
+            args: vec![],
+            cycles: 2_500,
+        })
+        .await
+        .err()
+        .expect("Expected an Err response.");
+        ctx.call_state_reset();
+
+        assert_eq!(
+            ctx.get::<Ledger>().balance(&mock_principals::john()),
+            10_000_000_000
+        );
+    }
 }
