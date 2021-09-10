@@ -5,8 +5,38 @@ use ic_kit::{get_context, Context};
 use serde::Deserialize;
 
 #[derive(Deserialize, CandidType, Clone, Default)]
+pub struct StatsDataV0 {
+    supply: Nat,
+    history_events: u64,
+    balance: u64,
+    // Usage statistics
+    transfers_count: u64,
+    mints_count: u64,
+    burns_count: u64,
+    proxy_calls_count: u64,
+    canisters_created_count: u64,
+}
+
+impl From<StatsDataV0> for StatsData {
+    fn from(s: StatsDataV0) -> Self {
+        StatsData {
+            supply: s.supply,
+            fee: Nat::default(),
+            history_events: s.history_events,
+            balance: s.balance,
+            transfers_count: s.transfers_count,
+            mints_count: s.mints_count,
+            burns_count: s.burns_count,
+            proxy_calls_count: s.proxy_calls_count,
+            canisters_created_count: s.canisters_created_count,
+        }
+    }
+}
+
+#[derive(Deserialize, CandidType, Clone, Default)]
 pub struct StatsData {
     supply: Nat,
+    fee: Nat,
     history_events: u64,
     balance: u64,
     // Usage statistics
@@ -67,6 +97,13 @@ impl StatsData {
         let ic = get_context();
         let stats = ic.get_mut::<StatsData>();
         stats.supply -= amount;
+    }
+
+    #[inline]
+    pub fn capture_fee(amount: u64) {
+        let ic = get_context();
+        let stats = ic.get_mut::<StatsData>();
+        stats.fee += amount;
     }
 }
 

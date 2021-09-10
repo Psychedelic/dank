@@ -1,3 +1,4 @@
+use crate::fee::compute_fee;
 use crate::history::{HistoryBuffer, Transaction, TransactionId, TransactionKind};
 use crate::management::IsShutDown;
 use crate::stats::StatsData;
@@ -80,14 +81,14 @@ pub async fn balance(account: Option<Principal>) -> u64 {
 }
 
 #[derive(Deserialize, CandidType)]
-struct TransferArguments {
-    to: Principal,
-    amount: u64,
+pub struct TransferArguments {
+    pub to: Principal,
+    pub amount: u64,
     // TODO(qt3ie) Notify argument.
 }
 
-#[derive(CandidType)]
-enum TransferError {
+#[derive(CandidType, Debug)]
+pub enum TransferError {
     InsufficientBalance,
     AmountTooLarge,
     CallFailed,
@@ -95,7 +96,7 @@ enum TransferError {
 }
 
 #[update]
-async fn transfer(args: TransferArguments) -> Result<TransactionId, TransferError> {
+pub async fn transfer(args: TransferArguments) -> Result<TransactionId, TransferError> {
     IsShutDown::guard();
 
     let ic = get_context();
@@ -103,17 +104,17 @@ async fn transfer(args: TransferArguments) -> Result<TransactionId, TransferErro
 
     crate::progress().await;
 
+    let fee = compute_fee(args.amount);
     let ledger = ic.get_mut::<Ledger>();
-
     ledger
-        .withdraw(&caller, args.amount)
+        .withdraw(&caller, args.amount + fee)
         .map_err(|_| TransferError::InsufficientBalance)?;
     ledger.deposit(args.to, args.amount);
 
     let transaction = Transaction {
         timestamp: ic.time(),
         cycles: args.amount,
-        fee: 0,
+        fee,
         kind: TransactionKind::Transfer {
             from: caller,
             to: args.to,
@@ -124,13 +125,13 @@ async fn transfer(args: TransferArguments) -> Result<TransactionId, TransferErro
     Ok(id)
 }
 
-#[derive(CandidType)]
-enum MintError {
+#[derive(CandidType, Debug)]
+pub enum MintError {
     NotSufficientLiquidity,
 }
 
 #[update]
-async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
+pub async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
     IsShutDown::guard();
 
     let ic = get_context();
@@ -140,15 +141,22 @@ async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
 
     let account = account.unwrap_or(caller);
     let available = ic.msg_cycles_available();
+    let fee = compute_fee(available);
+
+    if available <= fee {
+        panic!("Cannot mint less than {}", fee);
+    }
+
     let accepted = ic.msg_cycles_accept(available);
+    let cycles = accepted - fee;
 
     let ledger = ic.get_mut::<Ledger>();
-    ledger.deposit(account.clone(), accepted);
+    ledger.deposit(account.clone(), cycles);
 
     let transaction = Transaction {
         timestamp: ic.time(),
-        cycles: accepted,
-        fee: 0,
+        cycles,
+        fee,
         kind: TransactionKind::Mint { to: account },
     };
 
@@ -157,29 +165,29 @@ async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
 }
 
 #[derive(Deserialize, CandidType)]
-struct BurnArguments {
-    canister_id: Principal,
-    amount: u64,
+pub struct BurnArguments {
+    pub canister_id: Principal,
+    pub amount: u64,
 }
 
-#[derive(CandidType)]
-enum BurnError {
+#[derive(CandidType, Debug)]
+pub enum BurnError {
     InsufficientBalance,
     InvalidTokenContract,
     NotSufficientLiquidity,
 }
 
 #[update]
-async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
+pub async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
     IsShutDown::guard();
 
     let ic = get_context();
     let caller = ic.caller();
 
+    let deduced_fee = compute_fee(args.amount);
     let ledger = ic.get_mut::<Ledger>();
-
     ledger
-        .withdraw(&caller, args.amount)
+        .withdraw(&caller, args.amount + deduced_fee)
         .map_err(|_| BurnError::InsufficientBalance)?;
 
     #[derive(CandidType)]
@@ -203,10 +211,12 @@ async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
         Ok(()) => {
             let refunded = ic.msg_cycles_refunded();
             let cycles = args.amount - refunded;
+            let actual_fee = compute_fee(cycles);
+            let refunded = refunded + (deduced_fee - actual_fee);
             let transaction = Transaction {
                 timestamp: ic.time(),
                 cycles,
-                fee: 0,
+                fee: actual_fee,
                 kind: TransactionKind::Burn {
                     from: caller.clone(),
                     to: args.canister_id,
@@ -217,7 +227,10 @@ async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
 
             (Ok(id), refunded)
         }
-        Err(_) => (Err(BurnError::InvalidTokenContract), args.amount),
+        Err(_) => (
+            Err(BurnError::InvalidTokenContract),
+            args.amount + deduced_fee,
+        ),
     };
 
     if refunded > 0 {

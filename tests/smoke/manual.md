@@ -9,6 +9,7 @@ dfx start
 In another tab:
 
 ```shell
+dfx identity use manual-test-1
 dfx deploy --with-cycles 48000000000000 xtc
 dfx deploy --with-cycles 12000000000000 piggy-bank
 ```
@@ -37,11 +38,12 @@ dfx canister call piggy-bank perform_mint "(record { canister= principal \"$xtcI
 dfx canister call xtc stats
 # Supply should be 10_000_000_000_000
 # Mint count should be 1
+# fee should be 2_000_000_000
 # history_events should be 1
 
 # Check your balance has the cycles
 dfx canister call xtc balance "(null)"
-# shoule be (10_000_000_000_000 : nat64)
+# shoule be (9_998_000_000_000 : nat64)
 
 # Check the transaction history
 dfx canister call xtc get_transaction "(0)"
@@ -80,7 +82,7 @@ For a non-existant account
 ```shell
 dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
 
-# excpect returned balance as nat64
+# excpect returned balance as nat64: 0
 ```
 
 ## Transfer
@@ -95,7 +97,7 @@ dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
 dfx canister --no-wallet call xtc transfer "(record { to= principal \"$secondPrincipalId\"; amount= (1000:nat64) })"
 
 dfx canister call xtc balance "(opt principal \"$principalId\")"
-# expect balance before - transfer amount (1000)
+# expect balance before - transfer amount (1000) - fee (2_000_000_00) = 9_995_999_999_000
 
 dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
 # expect transfer amount (1000)
@@ -103,6 +105,7 @@ dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
 dfx canister call xtc stats
 # expect supply remains 10TC
 # expect transfer count is 1
+# expect fee to be 4_000_000_000
 # expect history_events to be 2
 ```
 
@@ -117,31 +120,45 @@ dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
 
 dfx canister --no-wallet call xtc transfer "(record { to= principal \"$principalId\"; amount= (1000:nat64) })"
 
+# Insufficient balance due to fees
+
+dfx identity use manual-test-1 
+dfx canister --no-wallet call xtc transfer "(record { to= principal \"$secondPrincipalId\"; amount= (2_000_000_000:nat64) })"
+dfx canister call xtc balance "(opt principal \"$principalId\")" # 9_991_999_999_000
+dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
+
+# Try again with fees
+dfx identity use manual-test-2
+dfx canister --no-wallet call xtc transfer "(record { to= principal \"$principalId\"; amount= (1000:nat64) })"
+
 dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
 # should be 0
 
 dfx canister call xtc balance "(opt principal \"$principalId\")"
-# should be back to 10TC
+# should be back to 9_990_000_000_000 (10TC minus fees)
 
 dfx canister call xtc stats
 # expect supply remains 10TC
 # expect transfer count is 2
 # expect history_events to be 3
 
-dfx canister call xtc get_transaction "(2)"
+dfx canister call xtc get_transaction "(4)"
 
 dfx canister call xtc events "record { limit= 5: nat16 }"
 # should show the 3 transactions, with the last transfer as the first entry, matching
 # what you get back from get_transaction
 ```
 
-Transfer 0 cycles should be rejected
+Transfer 0 cycles should be accepted but charge a fee
 
 ```shell
 # as identity 1 
 dfx canister --no-wallet call xtc transfer "(record { to= principal \"$secondPrincipalId\"; amount= (0:nat64) })"
 
-# expect error -  Transaction is expected to have a non-zero amount
+# transaction goes through
+
+dfx canister call xtc balance "(null)"
+# 9_996_000_000_000 - fee taken
 ```
 
 ## Burn
@@ -160,14 +177,14 @@ dfx canister call xtc burn "record { canister_id= principal \"$(dfx canister id 
 
 # Check balance
 dfx canister call xtc balance "(null)"
-# should be amount less than before
+# should be amount less than before - including the fee
 
 # Chck piggy bank cycles balance
 dfx canister status piggy-bank
 # Balance should be burn amount higher
 
 # Check transaction
-dfx canister call xtc get_transaction "(3)"
+dfx canister call xtc get_transaction "(5)"
 dfx canister call xtc events "record { limit= 5: nat16 }"
 ```
 
@@ -207,7 +224,7 @@ dfx canister --no-wallet call xtc wallet_create_canister "(record {cycles= (1_00
 
 # Returns canister principal id
 
-# Balance is decremented
+# Balance is decremented - including the fee
 dfx canister call xtc balance "(null)"
 
 # check the newly created canister
@@ -222,7 +239,8 @@ dfx canister call xtc events "record { limit= 10: nat16 }"
 
 dfx canister call xtc stats
 # Supply should have dropped by creation amount
-# history_events increments to 5
+# history_events increments to 6
+# fees to have an addition 2 billion
 # canister_created_count is 1
 ```
 
@@ -255,11 +273,11 @@ dfx canister call xtc wallet_call "(record { canister= principal \"$(dfx caniste
 
 # check your balance after
 dfx canister call xtc balance "(null)"
-# no change in balance
+# fee has been taken
 
 dfx canister call xtc stats
 # no increase in the no of transactions
-# no change in supply
+# supply down by fee
 # no change in procy call counts
 ```
 
@@ -274,11 +292,11 @@ dfx canister call xtc wallet_call "(record { canister= principal \"$walletId\"; 
 # succeeds with response
 
 dfx canister call xtc balance "(null)"
-# balance decremented by 1000
+# balance decremented by 1000 + fee (2 billion)
 
 dfx canister call xtc get_transaction "(5)"
 # expect transaction with from, method_name, canister
-dfx canister call xtc events "record { from= (opt 0); limit= 10: nat16 }"
+dfx canister call xtc events "record { limit= 10: nat16 }"
 
 # check cycles are passed along
 dfx canister --no-wallet status $walletId
@@ -307,6 +325,7 @@ Lookup transaction out of bounds:
 
 ```shell
 dfx canister call xtc get_transaction "(100)"
+# (null)
 ```
 
 Lookup events
