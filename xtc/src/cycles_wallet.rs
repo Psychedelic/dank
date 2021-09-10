@@ -406,4 +406,67 @@ mod tests {
             10_000_000_000
         );
     }
+
+    #[async_test]
+    async fn send_fee() {
+        let ctx = MockContext::new()
+            .with_consume_cycles_handler(2_000)
+            .with_caller(mock_principals::alice())
+            .inject();
+
+        init_ledger(ctx);
+
+        wallet_send(SendCyclesArgs {
+            canister: mock_principals::xtc(),
+            amount: 1_000,
+        })
+        .await
+        .expect("Unexpected error.");
+        ctx.call_state_reset();
+
+        assert_eq!(
+            ctx.get::<Ledger>().balance(&mock_principals::alice()),
+            10_000_000_000 - 1_000 - compute_fee(1_000)
+        );
+
+        // With refund.
+
+        ctx.update_caller(mock_principals::bob());
+        wallet_send(SendCyclesArgs {
+            canister: mock_principals::xtc(),
+            amount: 2_500,
+        })
+        .await
+        .expect("Unexpected error.");
+        ctx.call_state_reset();
+
+        assert_eq!(
+            ctx.get::<Ledger>().balance(&mock_principals::bob()),
+            10_000_000_000 - 2_000 - compute_fee(2_000)
+        );
+
+        // With error.
+
+        ctx.update_caller(mock_principals::john());
+        ctx.clear_handlers();
+        ctx.use_handler(RawHandler::raw(Box::new(|_, _, _, _| {
+            Err((
+                RejectionCode::DestinationInvalid,
+                "Canister not found.".into(),
+            ))
+        })));
+
+        wallet_send(SendCyclesArgs {
+            canister: mock_principals::xtc(),
+            amount: 2_500,
+        })
+        .await
+        .err()
+        .expect("Expected Err response.");
+
+        assert_eq!(
+            ctx.get::<Ledger>().balance(&mock_principals::john()),
+            10_000_000_000
+        );
+    }
 }
