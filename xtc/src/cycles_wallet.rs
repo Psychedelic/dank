@@ -256,217 +256,125 @@ mod tests {
     use crate::ledger::Ledger;
     use ic_kit::{async_test, Context, MockContext, RejectionCode};
     use ic_kit::{mock_principals, Method, RawHandler};
+    use std::fmt::Debug;
+    use std::future::Future;
+    use std::pin::Pin;
 
-    /// Init a mock ledger that sets an initial 10TC balance for alice, bob, john.
-    fn init_ledger(ctx: &mut MockContext) {
+    fn reset_ledger(ctx: &mut MockContext) {
         let ledger = ctx.get_mut::<Ledger>();
-        ledger.deposit(mock_principals::alice(), 10_000_000_000);
-        ledger.deposit(mock_principals::bob(), 10_000_000_000);
-        ledger.deposit(mock_principals::john(), 10_000_000_000);
+        ledger.deposit(Principal::anonymous(), 3 * 10_000_000_000_000);
+        ledger.load(vec![
+            (mock_principals::alice(), 10_000_000_000_000),
+            (mock_principals::bob(), 10_000_000_000_000),
+            (mock_principals::john(), 10_000_000_000_000),
+        ]);
+    }
+
+    /// General method to test the behaviour of fee implementation of methods.
+    async fn test_fee<T: CandidType + Clone, O, E: Debug>(
+        response: T,
+        cb: Box<dyn Fn(u64) -> Pin<Box<dyn Future<Output = Result<O, E>>>>>,
+    ) {
+        let ctx = MockContext::new()
+            .with_caller(mock_principals::alice())
+            .inject();
+
+        // Consumes all
+        reset_ledger(ctx);
+        ctx.clear_handlers();
+        ctx.use_handler(
+            Method::new()
+                .response(response.clone())
+                .cycles_consume(2_000),
+        );
+        cb(1_000).await.expect("Unexpected error.");
+        ctx.call_state_reset();
+
+        assert_eq!(
+            ctx.get::<Ledger>().balance(&mock_principals::alice()),
+            10_000_000_000_000 - 1_000 - compute_fee(1_000)
+        );
+
+        // With refund.
+        reset_ledger(ctx);
+        cb(10_000).await.expect("Unexpected error.");
+        ctx.call_state_reset();
+
+        assert_eq!(
+            ctx.get::<Ledger>().balance(&mock_principals::alice()),
+            10_000_000_000_000 - 2_000 - compute_fee(2_000)
+        );
+
+        // With error.
+        reset_ledger(ctx);
+        ctx.clear_handlers();
+        ctx.use_handler(RawHandler::raw(Box::new(|_, _, _, _| {
+            Err((
+                RejectionCode::DestinationInvalid,
+                "Canister not found.".into(),
+            ))
+        })));
+        cb(10_000).await.err().expect("Expected Err response.");
+        ctx.call_state_reset();
+
+        assert_eq!(
+            ctx.get::<Ledger>().balance(&mock_principals::alice()),
+            10_000_000_000_000
+        );
     }
 
     #[async_test]
     async fn wallet_call_fee() {
-        use crate::cycles_wallet::{call, CallCanisterArgs};
-
-        // Create a context that has an inter-canister call handler which accepts upto 2_000 cycles
-        // on every call.
-        let ctx = MockContext::new()
-            .with_consume_cycles_handler(2_000)
-            .with_caller(mock_principals::alice())
-            .inject();
-
-        init_ledger(ctx);
-
-        call(CallCanisterArgs {
-            canister: mock_principals::john(),
-            method_name: "xxx".to_string(),
-            args: vec![],
-            cycles: 1_000,
-        })
-        .await
-        .expect("Unexpected failure.");
-        ctx.call_state_reset();
-
-        assert_eq!(
-            ctx.get::<Ledger>().balance(&mock_principals::alice()),
-            10_000_000_000 - 1_000 - compute_fee(1_000)
-        );
-
-        // Test when there is a refund.
-        ctx.update_caller(mock_principals::bob());
-
-        call(CallCanisterArgs {
-            canister: mock_principals::john(),
-            method_name: "xxx".to_string(),
-            args: vec![],
-            cycles: 2_500,
-        })
-        .await
-        .expect("Unexpected failure.");
-        ctx.call_state_reset();
-
-        assert_eq!(
-            ctx.get::<Ledger>().balance(&mock_principals::bob()),
-            10_000_000_000 - 2_000 - compute_fee(2_000)
-        );
-
-        // Test when the call fails
-        ctx.update_caller(mock_principals::john());
-        ctx.clear_handlers();
-        ctx.use_handler(RawHandler::raw(Box::new(|_, _, _, _| {
-            Err((
-                RejectionCode::DestinationInvalid,
-                "Canister not found.".into(),
-            ))
-        })));
-
-        call(CallCanisterArgs {
-            canister: mock_principals::john(),
-            method_name: "xxx".to_string(),
-            args: vec![],
-            cycles: 2_500,
-        })
-        .await
-        .err()
-        .expect("Expected an Err response.");
-        ctx.call_state_reset();
-
-        assert_eq!(
-            ctx.get::<Ledger>().balance(&mock_principals::john()),
-            10_000_000_000
-        );
+        test_fee(
+            (),
+            Box::new(|cycles| {
+                Box::pin(async move {
+                    call(CallCanisterArgs {
+                        canister: mock_principals::john(),
+                        method_name: "xxx".to_string(),
+                        args: vec![],
+                        cycles,
+                    })
+                    .await
+                })
+            }),
+        )
+        .await;
     }
 
     #[async_test]
     async fn create_canister_fee() {
-        let ctx = MockContext::new()
-            .with_handler(
-                Method::new()
-                    .cycles_consume(2_000)
-                    .response(WithCanisterId {
-                        canister_id: mock_principals::xtc(),
-                    }),
-            )
-            .with_caller(mock_principals::alice())
-            .inject();
-
-        init_ledger(ctx);
-
-        create_canister(CreateCanisterArgs {
-            cycles: 1_000,
-            controller: None,
-        })
-        .await
-        .expect("Unexpected error.");
-        ctx.call_state_reset();
-
-        assert_eq!(
-            ctx.get::<Ledger>().balance(&mock_principals::alice()),
-            10_000_000_000 - 1_000 - compute_fee(1_000)
-        );
-
-        // With refund.
-
-        ctx.update_caller(mock_principals::bob());
-        create_canister(CreateCanisterArgs {
-            cycles: 2_500,
-            controller: None,
-        })
-        .await
-        .expect("Unexpected error.");
-        ctx.call_state_reset();
-
-        assert_eq!(
-            ctx.get::<Ledger>().balance(&mock_principals::bob()),
-            10_000_000_000 - 2_000 - compute_fee(2_000)
-        );
-
-        // With error.
-
-        ctx.update_caller(mock_principals::john());
-        ctx.clear_handlers();
-        ctx.use_handler(RawHandler::raw(Box::new(|_, _, _, _| {
-            Err((
-                RejectionCode::DestinationInvalid,
-                "Canister not found.".into(),
-            ))
-        })));
-
-        create_canister(CreateCanisterArgs {
-            cycles: 2_500,
-            controller: None,
-        })
-        .await
-        .err()
-        .expect("Expected Err response.");
-
-        assert_eq!(
-            ctx.get::<Ledger>().balance(&mock_principals::john()),
-            10_000_000_000
-        );
+        test_fee(
+            WithCanisterId {
+                canister_id: mock_principals::xtc(),
+            },
+            Box::new(|cycles| {
+                Box::pin(async move {
+                    create_canister(CreateCanisterArgs {
+                        cycles,
+                        controller: None,
+                    })
+                    .await
+                })
+            }),
+        )
+        .await;
     }
 
     #[async_test]
     async fn send_fee() {
-        let ctx = MockContext::new()
-            .with_consume_cycles_handler(2_000)
-            .with_caller(mock_principals::alice())
-            .inject();
-
-        init_ledger(ctx);
-
-        wallet_send(SendCyclesArgs {
-            canister: mock_principals::xtc(),
-            amount: 1_000,
-        })
-        .await
-        .expect("Unexpected error.");
-        ctx.call_state_reset();
-
-        assert_eq!(
-            ctx.get::<Ledger>().balance(&mock_principals::alice()),
-            10_000_000_000 - 1_000 - compute_fee(1_000)
-        );
-
-        // With refund.
-
-        ctx.update_caller(mock_principals::bob());
-        wallet_send(SendCyclesArgs {
-            canister: mock_principals::xtc(),
-            amount: 2_500,
-        })
-        .await
-        .expect("Unexpected error.");
-        ctx.call_state_reset();
-
-        assert_eq!(
-            ctx.get::<Ledger>().balance(&mock_principals::bob()),
-            10_000_000_000 - 2_000 - compute_fee(2_000)
-        );
-
-        // With error.
-
-        ctx.update_caller(mock_principals::john());
-        ctx.clear_handlers();
-        ctx.use_handler(RawHandler::raw(Box::new(|_, _, _, _| {
-            Err((
-                RejectionCode::DestinationInvalid,
-                "Canister not found.".into(),
-            ))
-        })));
-
-        wallet_send(SendCyclesArgs {
-            canister: mock_principals::xtc(),
-            amount: 2_500,
-        })
-        .await
-        .err()
-        .expect("Expected Err response.");
-
-        assert_eq!(
-            ctx.get::<Ledger>().balance(&mock_principals::john()),
-            10_000_000_000
-        );
+        test_fee(
+            (),
+            Box::new(|cycles| {
+                Box::pin(async move {
+                    wallet_send(SendCyclesArgs {
+                        canister: mock_principals::xtc(),
+                        amount: cycles,
+                    })
+                    .await
+                })
+            }),
+        )
+        .await;
     }
 }
