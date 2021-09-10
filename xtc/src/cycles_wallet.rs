@@ -254,9 +254,8 @@ async fn wallet_create_wallet(_: CreateCanisterArgs) -> Result<WithCanisterId, S
 mod tests {
     use super::*;
     use crate::ledger::Ledger;
-    use ic_kit::{
-        async_test, mock_principals, CallHandler, Context, MockContext, RawHandler, RejectionCode,
-    };
+    use ic_kit::{async_test, Context, MockContext, RejectionCode};
+    use ic_kit::{mock_principals, Method, RawHandler};
 
     /// Init a mock ledger that sets an initial 10TC balance for alice, bob, john.
     fn init_ledger(ctx: &mut MockContext) {
@@ -332,6 +331,75 @@ mod tests {
         .err()
         .expect("Expected an Err response.");
         ctx.call_state_reset();
+
+        assert_eq!(
+            ctx.get::<Ledger>().balance(&mock_principals::john()),
+            10_000_000_000
+        );
+    }
+
+    #[async_test]
+    async fn create_canister_fee() {
+        let ctx = MockContext::new()
+            .with_handler(
+                Method::new()
+                    .cycles_consume(2_000)
+                    .response(WithCanisterId {
+                        canister_id: mock_principals::xtc(),
+                    }),
+            )
+            .with_caller(mock_principals::alice())
+            .inject();
+
+        init_ledger(ctx);
+
+        create_canister(CreateCanisterArgs {
+            cycles: 1_000,
+            controller: None,
+        })
+        .await
+        .expect("Unexpected error.");
+        ctx.call_state_reset();
+
+        assert_eq!(
+            ctx.get::<Ledger>().balance(&mock_principals::alice()),
+            10_000_000_000 - 1_000 - compute_fee(1_000)
+        );
+
+        // With refund.
+
+        ctx.update_caller(mock_principals::bob());
+        create_canister(CreateCanisterArgs {
+            cycles: 2_500,
+            controller: None,
+        })
+        .await
+        .expect("Unexpected error.");
+        ctx.call_state_reset();
+
+        assert_eq!(
+            ctx.get::<Ledger>().balance(&mock_principals::bob()),
+            10_000_000_000 - 2_000 - compute_fee(2_000)
+        );
+
+        // With error.
+
+        ctx.update_caller(mock_principals::john());
+        ctx.clear_handlers();
+        ctx.use_handler(RawHandler::raw(Box::new(|_, _, _, _| {
+            Err((
+                RejectionCode::DestinationInvalid,
+                "Canister not found.".into(),
+            ))
+        })));
+
+        create_canister(CreateCanisterArgs {
+            cycles: 2_500,
+            controller: None,
+        })
+        .await
+        .err()
+        .expect("Expected Err response.");
 
         assert_eq!(
             ctx.get::<Ledger>().balance(&mock_principals::john()),
