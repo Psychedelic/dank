@@ -49,7 +49,9 @@ impl HistoryBuffer {
                 return 0;
             }
 
-            panic!("Transaction is expected to have a non-zero amount.")
+            if transaction.fee == 0 {
+                panic!("Transaction is expected to have a non-zero amount.")
+            }
         }
 
         StatsData::capture_fee(transaction.fee);

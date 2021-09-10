@@ -27,7 +27,7 @@ async fn test_with_call_fee<T: CandidType + Clone, O, E: Debug>(
         .with_caller(mock_principals::alice())
         .inject();
 
-    // Consumes all
+    // Zero.
     reset_ledger(ctx);
     ctx.clear_handlers();
     ctx.use_handler(
@@ -35,6 +35,16 @@ async fn test_with_call_fee<T: CandidType + Clone, O, E: Debug>(
             .response(response.clone())
             .cycles_consume(2_000),
     );
+    cb(0).await.expect("Unexpected error.");
+    ctx.call_state_reset();
+
+    assert_eq!(
+        ctx.get::<Ledger>().balance(&mock_principals::alice()),
+        10_000_000_000_000 - 0 - compute_fee(0)
+    );
+
+    // Consumes all
+    reset_ledger(ctx);
     cb(1_000).await.expect("Unexpected error.");
     ctx.call_state_reset();
 
@@ -172,6 +182,34 @@ async fn transfer_fee() {
     assert_eq!(
         ctx.get::<Ledger>().balance(&mock_principals::bob()),
         10_000_000_000_000 + 5_000
+    );
+}
+
+#[async_test]
+async fn transfer_fee_zero() {
+    use crate::ledger::*;
+
+    let ctx = MockContext::new()
+        .with_caller(mock_principals::alice())
+        .inject();
+
+    reset_ledger(ctx);
+
+    transfer(TransferArguments {
+        to: mock_principals::bob(),
+        amount: 0,
+    })
+    .await
+    .expect("Unexpected error.");
+
+    assert_eq!(
+        ctx.get::<Ledger>().balance(&mock_principals::alice()),
+        10_000_000_000_000 - 0 - compute_fee(0)
+    );
+
+    assert_eq!(
+        ctx.get::<Ledger>().balance(&mock_principals::bob()),
+        10_000_000_000_000 + 0
     );
 }
 
