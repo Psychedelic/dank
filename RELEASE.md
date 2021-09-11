@@ -24,7 +24,7 @@ If you haven't installed the wasm32 target, install it with
 rustup target add wasm32-unknown-unknown
 ```
 
-If you haven't installed the IC CDK optimizer, install it with
+If you haven't installed the IC CDK optimizer, install it with the following. Run this from a directory where there is no Cargo.toml:
 ```
 cargo install ic-cdk-optimizer
 ```
