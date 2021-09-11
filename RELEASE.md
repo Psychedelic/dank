@@ -60,12 +60,12 @@ dfx canister --network=ic install --mode=upgrade xtc
 
 Balance
 ```
-dfx canister --network=ic call aanaa-xaaaa-aaaah-aaeiq-cai  balance "(null)"
+dfx canister --network=ic call xtc  balance "(null)"
 ```
 
 Transfer
 ```
-dfx canister --network=ic --no-wallet call aanaa-xaaaa-aaaah-aaeiq-cai transfer "(record { to= principal \"some-account's-principal-id\"; amount= (1000:nat64) })"
+dfx canister --network=ic --no-wallet call xtc transfer "(record { to= principal \"some-account's-principal-id\"; amount= (1000:nat64) })"
 ```
 
 Stats
