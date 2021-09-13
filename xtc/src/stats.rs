@@ -35,16 +35,16 @@ impl From<StatsDataV0> for StatsData {
 
 #[derive(Deserialize, CandidType, Clone, Default)]
 pub struct StatsData {
-    supply: Nat,
-    fee: Nat,
-    history_events: u64,
-    balance: u64,
+    pub supply: Nat,
+    pub fee: Nat,
+    pub history_events: u64,
+    pub balance: u64,
     // Usage statistics
-    transfers_count: u64,
-    mints_count: u64,
-    burns_count: u64,
-    proxy_calls_count: u64,
-    canisters_created_count: u64,
+    pub transfers_count: u64,
+    pub mints_count: u64,
+    pub burns_count: u64,
+    pub proxy_calls_count: u64,
+    pub canisters_created_count: u64,
 }
 
 pub enum CountTarget {

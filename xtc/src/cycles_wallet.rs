@@ -78,13 +78,13 @@ pub async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
             ic.get_mut::<HistoryBuffer>().push(transaction);
 
             if refunded > 0 {
-                ledger.deposit(caller, refunded);
+                ledger.deposit(&caller, refunded);
             }
 
             Ok(CallResult { r#return: x })
         }
         Err((code, msg)) => {
-            ledger.deposit(caller, args.cycles + deduced_fee);
+            ledger.deposit(&caller, args.cycles + deduced_fee);
             Err(format!(
                 "An error happened during the call: {}: {}",
                 code as u8, msg
@@ -148,13 +148,13 @@ pub async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId,
             ic.get_mut::<HistoryBuffer>().push(transaction);
 
             if refunded > 0 {
-                ledger.deposit(caller, refunded);
+                ledger.deposit(&caller, refunded);
             }
 
             r
         }
         Err((code, msg)) => {
-            ledger.deposit(caller, args.cycles + deduced_fee);
+            ledger.deposit(&caller, args.cycles + deduced_fee);
             return Err(format!(
                 "An error happened during the call: {}: {}",
                 code as u8, msg
@@ -234,7 +234,7 @@ pub async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
     };
 
     if refunded > 0 {
-        ledger.deposit(caller, refunded);
+        ledger.deposit(&caller, refunded);
     }
 
     result

@@ -12,7 +12,7 @@ pub struct TokenMetaData<'a> {
 #[query]
 pub fn meta() -> TokenMetaData<'static> {
     TokenMetaData {
-        name: "Cycles",
+        name: "XTC Cycles",
         symbol: "XTC",
         decimal: 12,
         features: vec!["history"],
