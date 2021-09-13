@@ -8,7 +8,7 @@ edition = "2018"
 xtc-history = {path="../xtc-history/xtc-history"}
 xtc-history-common = {path= "../xtc-history/xtc-history-common" }
 serde_bytes = "0.11"
-ic-kit = "0.4.1"
+ic-kit = "0.4.2"
 ic-cdk = "0.3.1"
 serde = { version="1.0.130", features = ["derive"] }
 
