@@ -6,54 +6,64 @@ use ic_kit::candid::CandidType;
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context, Principal};
 use serde::*;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
-pub struct Ledger(HashMap<Principal, u64>);
-
-impl Default for Ledger {
-    fn default() -> Self {
-        Self(HashMap::new())
-    }
+#[derive(Default)]
+pub struct Ledger {
+    // stores the cycle balance hold by the principal
+    balances: HashMap<Principal, u64>,
 }
 
 impl Ledger {
     pub fn archive(&mut self) -> Vec<(Principal, u64)> {
-        let map = std::mem::replace(&mut self.0, HashMap::new());
-        map.into_iter()
+        std::mem::take(&mut self.balances)
+            .into_iter()
             .filter(|(_, balance)| *balance > 0)
             .collect()
     }
 
     pub fn load(&mut self, archive: Vec<(Principal, u64)>) {
-        self.0 = archive.into_iter().collect();
-        self.0.reserve(25_000 - self.0.len());
+        self.balances = archive.into_iter().collect();
+        self.balances.reserve(25_000 - self.balances.len());
     }
 
     #[inline]
     pub fn balance(&self, account: &Principal) -> u64 {
-        match self.0.get(account) {
-            Some(balance) => *balance,
-            None => 0,
-        }
+        *(self.balances.get(account).unwrap_or(&0))
     }
 
     #[inline]
     pub fn deposit(&mut self, account: Principal, amount: u64) {
         StatsData::deposit(amount);
-        match self.0.entry(account) {
-            Entry::Occupied(mut e) => {
-                e.insert(*e.get() + amount);
+        *(self.balances.entry(account).or_default()) += amount;
+    }
+
+    #[inline]
+    pub fn withdraw_erc20(
+        &mut self,
+        account: &Principal,
+        amount: u64,
+    ) -> Result<u64, ErrorDetails> {
+        let balance = match self.balances.get_mut(&account) {
+            Some(balance) if *balance >= amount => {
+                *balance -= amount;
+                *balance
             }
-            Entry::Vacant(e) => {
-                e.insert(amount);
-            }
+            _ => return Err(InsufficientBalanceError.clone()),
+        };
+
+        if balance == 0 {
+            self.balances.remove(&account);
         }
+
+        StatsData::withdraw(amount);
+
+        Ok(balance)
     }
 
     #[inline]
     pub fn withdraw(&mut self, account: &Principal, amount: u64) -> Result<(), ()> {
-        let balance = match self.0.get_mut(&account) {
+        let balance = match self.balances.get_mut(&account) {
             Some(balance) if *balance >= amount => {
                 *balance -= amount;
                 *balance
@@ -62,7 +72,7 @@ impl Ledger {
         };
 
         if balance == 0 {
-            self.0.remove(&account);
+            self.balances.remove(&account);
         }
 
         StatsData::withdraw(amount);
@@ -70,6 +80,27 @@ impl Ledger {
         Ok(())
     }
 }
+
+#[derive(CandidType, Clone)]
+enum APIError {
+    InsufficientBalance,
+    Unknown,
+}
+
+#[derive(CandidType, Clone)]
+struct ErrorDetails {
+    msg: &'static str,
+    code: APIError,
+}
+
+static InsufficientBalanceError: ErrorDetails = ErrorDetails {
+    msg: "Insufficient Balance",
+    code: APIError::InsufficientBalance,
+};
+static UnknownError: ErrorDetails = ErrorDetails {
+    msg: "Unknown",
+    code: APIError::Unknown,
+};
 
 #[update]
 pub async fn balance(account: Option<Principal>) -> u64 {

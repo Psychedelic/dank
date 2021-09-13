@@ -124,7 +124,6 @@ pub async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId,
     };
 
     let create_result = match CreateCanister::perform_with_payment(
-        ic,
         Principal::management_canister(),
         (in_args,),
         args.cycles,

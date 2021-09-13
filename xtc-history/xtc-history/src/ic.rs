@@ -6,8 +6,14 @@ use xtc_history_common::types::*;
 
 pub struct IcBackend;
 
+#[cfg(debug_cfg)]
 const BUCKET_WASM: &[u8] =
-    include_bytes!("../../../target/wasm32-unknown-unknown/release/xtc_history_bucket-opt.wasm");
+    include_bytes!("../../../target/wasm32-unknown-unknown/debug/xtc_history_bucket-deb-opt.wasm");
+
+#[cfg(not(debug_cfg))]
+const BUCKET_WASM: &[u8] = include_bytes!(
+    "../../../target/wasm32-unknown-unknown/release/xtc_history_bucket-rel-opt.wasm"
+);
 
 impl Backend<Principal> for IcBackend {
     fn create_canister() -> Res<Principal> {
