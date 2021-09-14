@@ -39,7 +39,7 @@ const applyTransaction = (ledger, transaction) => {
     const cycles = transaction.cycles;
 
     let entry = ledger[to] || BigInt(0);
-    entry = entry + cycles;
+    entry = (entry + cycles);
     ledger[to] = entry;
   }
 
@@ -47,6 +47,7 @@ const applyTransaction = (ledger, transaction) => {
     const to = transaction.kind.Transfer.to.toText();
     const from = transaction.kind.Transfer.from.toText();
     const cycles = transaction.cycles;
+    const fee = transaction.fee
 
     // increment to
     let entry = ledger[to] || BigInt(0);
@@ -55,38 +56,40 @@ const applyTransaction = (ledger, transaction) => {
 
     // decrement from
     let fromEntry = ledger[from];
-    fromEntry = fromEntry - cycles;
+    fromEntry = fromEntry - cycles - fee;
     ledger[from] = fromEntry;
   }
 
   if (transaction.kind.Burn) {
     const from = transaction.kind.Burn.from.toText();
     const cycles = transaction.cycles;
+    const fee = transaction.fee
 
     // decrement from
     let fromEntry = ledger[from];
-    fromEntry = fromEntry - cycles;
+    fromEntry = fromEntry - cycles - fee;
     ledger[from] = fromEntry;
   }
 
   if (transaction.kind.CanisterCreated) {
     const from = transaction.kind.CanisterCreated.from.toText();
-
     const cycles = transaction.cycles;
+    const fee = transaction.fee
 
     // decrement from
     let fromEntry = ledger[from];
-    fromEntry = fromEntry - cycles;
+    fromEntry = fromEntry - cycles - fee;
     ledger[from] = fromEntry;
   }
 
   if (transaction.kind.CanisterCalled) {
     const from = transaction.kind.CanisterCalled.from.toText();
     const cycles = transaction.cycles;
+    const fee = transaction.fee
 
     // decrement from
     let fromEntry = ledger[from];
-    fromEntry = fromEntry - cycles;
+    fromEntry = fromEntry - cycles - fee;
     ledger[from] = fromEntry;
   }
 
