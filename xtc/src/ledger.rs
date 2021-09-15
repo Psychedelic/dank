@@ -41,10 +41,7 @@ impl Ledger {
         if amount == 0 {
             self.cleanup_allowances(allower, spender);
         } else {
-            *(self
-                .allowances
-                .entry((*allower, *spender))
-                .or_default()) = amount;
+            *(self.allowances.entry((*allower, *spender)).or_default()) = amount;
         }
     }
 
@@ -55,10 +52,7 @@ impl Ledger {
 
     #[inline]
     pub fn allowances(&self, allower: &Principal, spender: &Principal) -> u64 {
-        *self
-            .allowances
-            .get(&(*allower, *spender))
-            .unwrap_or(&0)
+        *self.allowances.get(&(*allower, *spender)).unwrap_or(&0)
     }
 
     /// This method is allowed to violate the invariants of the ledger upon return:
@@ -378,26 +372,14 @@ mod tests {
         // inserting non-zero into empty ledger and read back the allowance
         ledger = Ledger::default();
         ledger.approve(&alice(), &bob(), 1000);
-        assert_eq!(
-            ledger
-                .allowances
-                .get(&(alice(), bob()))
-                .unwrap(),
-            &1000
-        );
+        assert_eq!(ledger.allowances.get(&(alice(), bob())).unwrap(), &1000);
         assert_eq!(ledger.allowances(&alice(), &bob()), 1000);
 
         // overriding allowance with non-zero and read back the allowance
         ledger = Ledger::default();
         ledger.approve(&alice(), &bob(), 1000);
         ledger.approve(&alice(), &bob(), 2000);
-        assert_eq!(
-            ledger
-                .allowances
-                .get(&(alice(), bob()))
-                .unwrap(),
-            &2000
-        );
+        assert_eq!(ledger.allowances.get(&(alice(), bob())).unwrap(), &2000);
         assert_eq!(ledger.allowances(&alice(), &bob()), 2000);
 
         // overriding allowance with zero and read back the allowance
@@ -442,7 +424,10 @@ mod tests {
         assert_eq!(ledger.balance(&bob()), 400);
         // bob tries withdrawing all his allowance, but alice doesn't have enough money
         assert_eq!(
-            ledger.transfer_from(&alice(), &bob(), 600).unwrap_err().code,
+            ledger
+                .transfer_from(&alice(), &bob(), 600)
+                .unwrap_err()
+                .code,
             APIError::InsufficientBalance
         );
 
@@ -453,7 +438,10 @@ mod tests {
         assert_eq!(ledger.balance(&alice()), 1000);
         assert_eq!(ledger.balance(&bob()), 0);
         assert_eq!(
-            ledger.transfer_from(&alice(), &bob(), 600).unwrap_err().code,
+            ledger
+                .transfer_from(&alice(), &bob(), 600)
+                .unwrap_err()
+                .code,
             APIError::InsufficientAllowance
         );
         // alowances didn't change
