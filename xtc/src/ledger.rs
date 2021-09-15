@@ -1,13 +1,16 @@
+use crate::common_types::{Operation, TxError, TxReceipt, TxRecord};
 use crate::fee::compute_fee;
 use crate::history::{HistoryBuffer, Transaction, TransactionId, TransactionKind};
 use crate::management::IsShutDown;
 use crate::meta::meta;
 use crate::stats::StatsData;
-use ic_kit::candid::{CandidType, Nat};
+use crate::utils;
+use ic_kit::candid::{CandidType, Int, Nat};
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context, Principal};
 use serde::*;
 use std::collections::HashMap;
+use std::convert::TryInto;
 
 #[derive(Default)]
 pub struct Ledger {
@@ -36,62 +39,95 @@ impl Ledger {
         self.allowances.remove(&(*allower, *spender));
     }
 
-    #[inline]
-    pub fn approve(&mut self, allower: &Principal, spender: &Principal, amount: u64) {
-        if amount == 0 {
-            self.cleanup_allowances(allower, spender);
-        } else {
-            *(self
-                .allowances
-                .entry((*allower, *spender))
-                .or_default()) = amount;
-        }
-    }
-
     /// 1. Allower can allow more money to Spender than Allower's internal balance
     /// 2. Calling alowances twice replaces the previous allowance
     /// 3. Calling allownces with zero amount clears the allowance from the internal
     ///    map.
-
     #[inline]
-    pub fn allowances(&self, allower: &Principal, spender: &Principal) -> u64 {
-        *self
-            .allowances
-            .get(&(*allower, *spender))
-            .unwrap_or(&0)
-    }
-
-    /// This method is allowed to violate the invariants of the ledger upon return:
-    /// for example by changing only the allowances and return an error without
-    /// changing the balance. The callers of this functions might use trap
-    /// to revert the state of the ledger.
-    #[inline]
-    pub fn transfer_from(
+    pub fn approve(
         &mut self,
         allower: &Principal,
         spender: &Principal,
         amount: u64,
-    ) -> Result<(), ErrorDetails> {
-        let allowance = self.allowances(allower, spender);
-        if allowance < amount {
-            return Err(InsufficientAllowanceError.clone());
+        fee: u64,
+    ) -> Result<(), TxError> {
+        assert_ne!(
+            allower, spender,
+            "allower and spender users cannot be the same"
+        );
+        if self.balance(&allower) < fee {
+            return Err(TxError::InsufficientBalance);
         }
 
-        self.approve(allower, spender, allowance - amount);
+        self.withdraw_erc20(&allower, 0, fee)?;
 
-        self.transfer(allower, spender, amount)?;
+        if amount == 0 {
+            self.cleanup_allowances(allower, spender);
+        } else {
+            *(self.allowances.entry((*allower, *spender)).or_default()) = amount;
+        }
 
         Ok(())
     }
 
+    #[inline]
+    pub fn allowance(&self, allower: &Principal, spender: &Principal) -> u64 {
+        *self.allowances.get(&(*allower, *spender)).unwrap_or(&0)
+    }
+
+    /// 1. The fee is deducted from the caller's balance. This
+    /// fee deduction is necessary to prevent attacks, when an attacker can initiate
+    /// multiple small transfer_from from the account of userA to drain userA's
+    /// entire balance as fee payment.
+    /// 2. The allowance is decreased by the transferred amount.
+    /// 3. Early checks on balance amount and allowance are done to make sure
+    /// the subsequent state updates cannot fail.
+    /// 4 No need to check if allower==spender, as it is already checked in approve
+    /// function.
+    #[inline]
+    pub fn transfer_from(
+        &mut self,
+        caller: &Principal,
+        allower: &Principal,
+        spender: &Principal,
+        amount: u64,
+        fee: u64,
+    ) -> Result<(), TxError> {
+        assert_ne!(amount, 0, "transfer amount cannot be zero");
+
+        let allowance = self.allowance(allower, spender);
+        if allowance < amount {
+            return Err(TxError::InsufficientAllowance);
+        }
+
+        if (allower == caller) {
+            if self.balance(&allower) < amount + fee {
+                return Err(TxError::InsufficientBalance);
+            }
+        } else if self.balance(&allower) < amount || self.balance(&caller) < fee {
+            return Err(TxError::InsufficientBalance);
+        }
+
+        self.approve(allower, spender, allowance - amount, 0);
+        self.withdraw_erc20(&caller, 0, fee);
+        self.transfer(allower, spender, amount, 0)?;
+
+        Ok(())
+    }
+
+    /// 1. Early checks on balance amount is done in withdrawErc20 to make sure
+    /// the transfer will be successful, as there will be no refund of fees.
     #[inline]
     pub fn transfer(
         &mut self,
         from: &Principal,
         to: &Principal,
         amount: u64,
-    ) -> Result<(), ErrorDetails> {
-        self.withdrawErc20(from, amount)?;
+        fee: u64,
+    ) -> Result<(), TxError> {
+        assert_ne!(amount, 0, "transfer amount cannot be zero");
+        assert_ne!(from, to, "from and to users cannot be the same");
+        self.withdraw_erc20(from, amount, fee)?;
         self.deposit(to, amount);
         Ok(())
     }
@@ -108,13 +144,24 @@ impl Ledger {
     }
 
     #[inline]
-    pub fn withdrawErc20(&mut self, account: &Principal, amount: u64) -> Result<(), ErrorDetails> {
+    pub fn withdraw_erc20(
+        &mut self,
+        account: &Principal,
+        amount: u64,
+        fee: u64,
+    ) -> Result<(), TxError> {
+        let total_amount = fee + amount;
+
+        if (total_amount == 0) {
+            return Ok(());
+        }
+
         let balance = match self.balances.get_mut(&account) {
-            Some(balance) if *balance >= amount => {
-                *balance -= amount;
+            Some(balance) if *balance >= total_amount => {
+                *balance -= total_amount;
                 *balance
             }
-            _ => return Err(InsufficientBalanceError.clone()),
+            _ => return Err(TxError::InsufficientBalance),
         };
 
         if balance == 0 {
@@ -146,53 +193,18 @@ impl Ledger {
     }
 }
 
-#[derive(CandidType, Clone, Debug, PartialEq)]
-pub enum APIError {
-    InsufficientBalance,
-    InsufficientAllowance,
-    Unknown,
-}
+//////////////////// BEGIN OF ERC-20 ///////////////////////
 
-#[derive(CandidType, Clone, Debug)]
-pub struct ErrorDetails {
-    msg: &'static str,
-    code: APIError,
-}
-
-static InsufficientBalanceError: ErrorDetails = ErrorDetails {
-    msg: "Insufficient Balance",
-    code: APIError::InsufficientBalance,
-};
-
-static InsufficientAllowanceError: ErrorDetails = ErrorDetails {
-    msg: "Insufficient Allowance",
-    code: APIError::InsufficientAllowance,
-};
-
-static UnknownError: ErrorDetails = ErrorDetails {
-    msg: "Unknown",
-    code: APIError::Unknown,
-};
-
-#[query]
-fn totalSupply() -> Nat {
-    StatsData::get().supply
-}
-
-#[update]
-pub async fn balance(account: Option<Principal>) -> u64 {
-    let ic = get_context();
-    let caller = ic.caller();
-    crate::progress().await;
-    let ledger = ic.get::<Ledger>();
-    ledger.balance(&account.unwrap_or(caller))
+#[query(name=balanceOf)]
+pub async fn balance_of(account: Principal) -> Nat {
+    let ledger = ic_kit::get_context().get::<Ledger>();
+    Nat::from(ledger.balance(&account))
 }
 
 #[derive(Deserialize, CandidType)]
 pub struct TransferArguments {
     pub to: Principal,
     pub amount: u64,
-    // TODO(qt3ie) Notify argument.
 }
 
 #[derive(CandidType, Debug)]
@@ -202,6 +214,105 @@ pub enum TransferError {
     CallFailed,
     Unknown,
 }
+
+#[query]
+pub async fn allowance(from: Principal, to: Principal) -> Nat {
+    return get_context().get::<Ledger>().allowance(&from, &to).into();
+}
+
+#[update]
+pub async fn approve(to: Principal, amount: Nat) -> TxReceipt {
+    IsShutDown::guard();
+    use ic_cdk::export::candid;
+    let ic = get_context();
+    let caller = ic.caller();
+
+    crate::progress().await;
+
+    let ledger = ic.get_mut::<Ledger>();
+    let amount_u64: u64 =
+        utils::convert_nat_to_u64(amount).expect("Amount cannot be represented as u64");
+    let fee = compute_fee(amount_u64);
+
+    ledger.approve(&caller, &to, amount_u64, fee)?;
+
+    let transaction = Transaction {
+        timestamp: ic.time(),
+        cycles: amount_u64,
+        fee,
+        kind: TransactionKind::Approve {
+            from: caller,
+            to: to,
+        },
+    };
+
+    Ok(Nat::from(
+        ic.get_mut::<HistoryBuffer>().push(transaction.clone()),
+    ))
+}
+
+#[update(name=transferErc20)]
+pub async fn transfer_erc20(to: Principal, amount: Nat) -> TxReceipt {
+    IsShutDown::guard();
+
+    let ic = get_context();
+    let caller = ic.caller();
+
+    crate::progress().await;
+
+    let ledger = ic.get_mut::<Ledger>();
+    let amount_u64: u64 =
+        utils::convert_nat_to_u64(amount).expect("transfer failed - unable to convert amount");
+    let fee = compute_fee(amount_u64);
+    ledger.transfer(&caller, &to, amount_u64, fee)?;
+
+    let transaction = Transaction {
+        timestamp: ic.time(),
+        cycles: amount_u64,
+        fee,
+        kind: TransactionKind::Transfer {
+            from: caller,
+            to: to,
+        },
+    };
+
+    Ok(Nat::from(
+        ic.get_mut::<HistoryBuffer>().push(transaction.clone()),
+    ))
+}
+
+#[update(name=TransferFrom)]
+pub async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> TxReceipt {
+    IsShutDown::guard();
+
+    let ic = get_context();
+    let caller = ic.caller();
+
+    crate::progress().await;
+
+    let ledger = ic.get_mut::<Ledger>();
+    let amount_u64: u64 =
+        utils::convert_nat_to_u64(amount).expect("transfer failed - unable to convert amount");
+    let fee = compute_fee(amount_u64);
+    ledger.transfer_from(&caller, &from, &to, amount_u64, fee)?;
+
+    let transaction = Transaction {
+        timestamp: ic.time(),
+        cycles: amount_u64,
+        fee,
+        kind: TransactionKind::TransferFrom {
+            caller: caller,
+            from: from,
+            to: to,
+        },
+    };
+
+    Ok(Nat::from(
+        ic.get_mut::<HistoryBuffer>().push(transaction.clone()),
+    ))
+}
+
+//////////////////// END OF ERC-20 ///////////////////////
 
 #[update]
 pub async fn transfer(args: TransferArguments) -> Result<TransactionId, TransferError> {
@@ -350,8 +461,8 @@ pub async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
 
 #[cfg(test)]
 mod tests {
-    use super::APIError;
     use super::Ledger;
+    use super::TxError;
     use ic_kit::{MockContext, Principal};
 
     fn alice() -> Principal {
@@ -373,53 +484,41 @@ mod tests {
         let mut ledger = Ledger::default();
 
         // empty ledger has zero allowance
-        assert_eq!(ledger.allowances(&alice(), &bob()), 0);
+        assert_eq!(ledger.allowance(&alice(), &bob()), 0);
 
         // inserting non-zero into empty ledger and read back the allowance
         ledger = Ledger::default();
-        ledger.approve(&alice(), &bob(), 1000);
-        assert_eq!(
-            ledger
-                .allowances
-                .get(&(alice(), bob()))
-                .unwrap(),
-            &1000
-        );
-        assert_eq!(ledger.allowances(&alice(), &bob()), 1000);
+        ledger.approve(&alice(), &bob(), 1000, 0);
+        assert_eq!(ledger.allowances.get(&(alice(), bob())).unwrap(), &1000);
+        assert_eq!(ledger.allowance(&alice(), &bob()), 1000);
 
         // overriding allowance with non-zero and read back the allowance
         ledger = Ledger::default();
-        ledger.approve(&alice(), &bob(), 1000);
-        ledger.approve(&alice(), &bob(), 2000);
-        assert_eq!(
-            ledger
-                .allowances
-                .get(&(alice(), bob()))
-                .unwrap(),
-            &2000
-        );
-        assert_eq!(ledger.allowances(&alice(), &bob()), 2000);
+        ledger.approve(&alice(), &bob(), 1000, 0);
+        ledger.approve(&alice(), &bob(), 2000, 0);
+        assert_eq!(ledger.allowances.get(&(alice(), bob())).unwrap(), &2000);
+        assert_eq!(ledger.allowance(&alice(), &bob()), 2000);
 
         // overriding allowance with zero and read back the allowance
         ledger = Ledger::default();
-        ledger.approve(&alice(), &bob(), 1000);
-        ledger.approve(&alice(), &bob(), 0);
+        ledger.approve(&alice(), &bob(), 1000, 0);
+        ledger.approve(&alice(), &bob(), 0, 0);
         // allowance removed from the ledger
         assert!(ledger.allowances.get(&(alice(), bob())).is_none());
         assert!(ledger.allowances.is_empty());
         // allowance returns zero
-        assert_eq!(ledger.allowances(&alice(), &bob()), 0);
+        assert_eq!(ledger.allowance(&alice(), &bob()), 0);
 
         // alice approve more than one person
         ledger = Ledger::default();
-        ledger.approve(&alice(), &bob(), 1000);
-        ledger.approve(&alice(), &charlie(), 2000);
-        assert_eq!(ledger.allowances(&alice(), &bob()), 1000);
-        assert_eq!(ledger.allowances(&alice(), &charlie()), 2000);
+        ledger.approve(&alice(), &bob(), 1000, 0);
+        ledger.approve(&alice(), &charlie(), 2000, 0);
+        assert_eq!(ledger.allowance(&alice(), &bob()), 1000);
+        assert_eq!(ledger.allowance(&alice(), &charlie()), 2000);
         // remove bob's allowance, charlie still has his
-        ledger.approve(&alice(), &bob(), 0);
-        assert_eq!(ledger.allowances(&alice(), &bob()), 0);
-        assert_eq!(ledger.allowances(&alice(), &charlie()), 2000);
+        ledger.approve(&alice(), &bob(), 0, 0);
+        assert_eq!(ledger.allowance(&alice(), &bob()), 0);
+        assert_eq!(ledger.allowance(&alice(), &charlie()), 2000);
         //bob is removed from the allowances map
         assert!(ledger.allowances.get(&(alice(), bob())).is_none());
     }
@@ -431,33 +530,37 @@ mod tests {
         // alice has less balance than she approved bob to retrieve
         let mut ledger = Ledger::default();
         ledger.deposit(&alice(), 500);
-        ledger.approve(&alice(), &bob(), 1000);
+        ledger.approve(&alice(), &bob(), 1000, 0);
         assert_eq!(ledger.balance(&alice()), 500);
         assert_eq!(ledger.balance(&bob()), 0);
-        ledger.transfer_from(&alice(), &bob(), 400);
+        ledger.transfer_from(&alice(), &alice(), &bob(), 400, 0);
         // alowances changed
-        assert_eq!(ledger.allowances(&alice(), &bob()), 600);
+        assert_eq!(ledger.allowance(&alice(), &bob()), 600);
         // balances changed
         assert_eq!(ledger.balance(&alice()), 100);
         assert_eq!(ledger.balance(&bob()), 400);
         // bob tries withdrawing all his allowance, but alice doesn't have enough money
         assert_eq!(
-            ledger.transfer_from(&alice(), &bob(), 600).unwrap_err().code,
-            APIError::InsufficientBalance
+            ledger
+                .transfer_from(&alice(), &alice(), &bob(), 600, 0)
+                .unwrap_err(),
+            TxError::InsufficientBalance
         );
 
         // alice has more balance then, she approved bob to retrieve
         let mut ledger = Ledger::default();
         ledger.deposit(&alice(), 1000);
-        ledger.approve(&alice(), &bob(), 500);
+        ledger.approve(&alice(), &bob(), 500, 0);
         assert_eq!(ledger.balance(&alice()), 1000);
         assert_eq!(ledger.balance(&bob()), 0);
         assert_eq!(
-            ledger.transfer_from(&alice(), &bob(), 600).unwrap_err().code,
-            APIError::InsufficientAllowance
+            ledger
+                .transfer_from(&alice(), &alice(), &bob(), 600, 0)
+                .unwrap_err(),
+            TxError::InsufficientAllowance
         );
         // alowances didn't change
-        assert_eq!(ledger.allowances(&alice(), &bob()), 500);
+        assert_eq!(ledger.allowance(&alice(), &bob()), 500);
         // balances didn't change
         assert_eq!(ledger.balance(&alice()), 1000);
         assert_eq!(ledger.balance(&bob()), 0);
@@ -492,4 +595,13 @@ mod tests {
         assert_eq!(ledger.balance(&bob()), 0);
         assert_eq!(ledger.balance(&charlie()), 0);
     }
+}
+
+#[update]
+pub async fn balance(account: Option<Principal>) -> u64 {
+    let ic = get_context();
+    let caller = ic.caller();
+    crate::progress().await;
+    let ledger = ic.get::<Ledger>();
+    ledger.balance(&account.unwrap_or(caller))
 }

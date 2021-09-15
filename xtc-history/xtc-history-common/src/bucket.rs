@@ -115,7 +115,7 @@ impl<Address, Event> BucketData<Address, Event> {
     {
         let bucket_offset = self.get_offset();
         let max = bucket_offset + self.events.len() as u64;
-        let offset = offset.unwrap_or(max);
+        let offset = offset.unwrap_or(max); // 3
 
         let (offset, limit) = if offset > max {
             let d = (offset - max) as usize;

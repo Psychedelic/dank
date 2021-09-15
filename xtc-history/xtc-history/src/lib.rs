@@ -94,6 +94,10 @@ impl<Address: Clone + std::cmp::PartialEq, Storage: Backend<Address>> History<Ad
             None => false,
         }
     }
+
+    pub fn get_history_data(&self) -> &HistoryData<Address> {
+        &self.data
+    }
 }
 
 impl<Address: Clone, Storage: Backend<Address>> History<Address, Storage> {
