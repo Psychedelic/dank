@@ -23,3 +23,19 @@ pub fn meta() -> TokenMetaData<'static> {
 fn meta_certified() -> TokenMetaData<'static> {
     meta()
 }
+
+// Disabled as the `name` clashes with a similar method in the cycles wallet
+// #[query]
+// fn name() -> &'static str {
+//     meta().name
+// }
+
+#[query]
+fn symbol() -> &'static str {
+    meta().symbol
+}
+
+#[query]
+fn decimal() -> u8 {
+    meta().decimal
+}

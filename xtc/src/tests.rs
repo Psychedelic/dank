@@ -10,7 +10,7 @@ use std::pin::Pin;
 
 fn reset_ledger(ctx: &mut MockContext) {
     let ledger = ctx.get_mut::<Ledger>();
-    ledger.deposit(Principal::anonymous(), 3 * 10_000_000_000_000);
+    ledger.deposit(&Principal::anonymous(), 3 * 10_000_000_000_000);
     ledger.load(vec![
         (mock_principals::alice(), 10_000_000_000_000),
         (mock_principals::bob(), 10_000_000_000_000),
