@@ -15,7 +15,7 @@ pub struct Ledger {
     balances: HashMap<Principal, u64>,
 
     // stores the allowances, approving Principal -> spender principal -> cycle balanace
-    allowances: HashMap<Principal, HashMap<Principal, u64>>,
+    allowances: HashMap<(Principal, Principal), u64>,
 }
 
 impl Ledger {
@@ -32,59 +32,41 @@ impl Ledger {
     }
 
     #[inline]
-    fn cleanupAllowances(&mut self, allower: &Principal, spender: &Principal) {
-        if let Some(spender_to_amount) = self.allowances.get_mut(&allower) {
-            spender_to_amount.remove(&spender);
-            if spender_to_amount.is_empty() {
-                self.allowances.remove(allower);
-            }
-        }
+    fn cleanup_allowances(&mut self, allower: &Principal, spender: &Principal) {
+        self.allowances.remove(&(*allower, *spender));
     }
 
     #[inline]
     pub fn approve(&mut self, allower: &Principal, spender: &Principal, amount: u64) {
         if amount == 0 {
-            self.cleanupAllowances(allower, spender);
+            self.cleanup_allowances(allower, spender);
         } else {
             *(self
                 .allowances
-                .entry(*allower)
-                .or_default()
-                .entry(*spender)
+                .entry((*allower, *spender))
                 .or_default()) = amount;
         }
     }
 
-    /***************************************************************************
-
-        1. Allower can allow more money to Spender than Allower's internal balance
-        2. Calling alowances twice replaces the previous allowance
-        3. Calling allownces with zero amount clears the allowance from the internal
-           map.
-
-    ***************************************************************************/
+    /// 1. Allower can allow more money to Spender than Allower's internal balance
+    /// 2. Calling alowances twice replaces the previous allowance
+    /// 3. Calling allownces with zero amount clears the allowance from the internal
+    ///    map.
 
     #[inline]
     pub fn allowances(&self, allower: &Principal, spender: &Principal) -> u64 {
         *self
             .allowances
-            .get(&allower)
-            .map(|spender_to_amount| spender_to_amount.get(&spender))
-            .flatten()
+            .get(&(*allower, *spender))
             .unwrap_or(&0)
     }
 
-    /***************************************************************************
-
-        This method is allowed to violate the invariants of the ledger upon return:
-        for example by changing only the allowances and return an error without
-        changing the balance. The callers of this functions might use trap
-        to revert the state of the ledger.
-
-    ***************************************************************************/
-
+    /// This method is allowed to violate the invariants of the ledger upon return:
+    /// for example by changing only the allowances and return an error without
+    /// changing the balance. The callers of this functions might use trap
+    /// to revert the state of the ledger.
     #[inline]
-    pub fn transferFrom(
+    pub fn transfer_from(
         &mut self,
         allower: &Principal,
         spender: &Principal,
@@ -191,22 +173,6 @@ static UnknownError: ErrorDetails = ErrorDetails {
     msg: "Unknown",
     code: APIError::Unknown,
 };
-
-// Disabled as the `name` clashes with a similar method in the cycles wallet
-// #[query]
-// fn name() -> &'static str {
-//     meta().name
-// }
-
-#[query]
-fn symbol() -> &'static str {
-    meta().symbol
-}
-
-#[query]
-fn decimal() -> u8 {
-    meta().decimal
-}
 
 #[query]
 fn totalSupply() -> Nat {
@@ -415,9 +381,7 @@ mod tests {
         assert_eq!(
             ledger
                 .allowances
-                .get(&alice())
-                .unwrap()
-                .get(&bob())
+                .get(&(alice(), bob()))
                 .unwrap(),
             &1000
         );
@@ -430,9 +394,7 @@ mod tests {
         assert_eq!(
             ledger
                 .allowances
-                .get(&alice())
-                .unwrap()
-                .get(&bob())
+                .get(&(alice(), bob()))
                 .unwrap(),
             &2000
         );
@@ -443,7 +405,7 @@ mod tests {
         ledger.approve(&alice(), &bob(), 1000);
         ledger.approve(&alice(), &bob(), 0);
         // allowance removed from the ledger
-        assert!(ledger.allowances.get(&alice()).is_none());
+        assert!(ledger.allowances.get(&(alice(), bob())).is_none());
         assert!(ledger.allowances.is_empty());
         // allowance returns zero
         assert_eq!(ledger.allowances(&alice(), &bob()), 0);
@@ -459,12 +421,7 @@ mod tests {
         assert_eq!(ledger.allowances(&alice(), &bob()), 0);
         assert_eq!(ledger.allowances(&alice(), &charlie()), 2000);
         //bob is removed from the allowances map
-        assert!(ledger
-            .allowances
-            .get(&alice())
-            .unwrap()
-            .get(&bob())
-            .is_none());
+        assert!(ledger.allowances.get(&(alice(), bob())).is_none());
     }
 
     #[test]
@@ -477,7 +434,7 @@ mod tests {
         ledger.approve(&alice(), &bob(), 1000);
         assert_eq!(ledger.balance(&alice()), 500);
         assert_eq!(ledger.balance(&bob()), 0);
-        ledger.transferFrom(&alice(), &bob(), 400);
+        ledger.transfer_from(&alice(), &bob(), 400);
         // alowances changed
         assert_eq!(ledger.allowances(&alice(), &bob()), 600);
         // balances changed
@@ -485,7 +442,7 @@ mod tests {
         assert_eq!(ledger.balance(&bob()), 400);
         // bob tries withdrawing all his allowance, but alice doesn't have enough money
         assert_eq!(
-            ledger.transferFrom(&alice(), &bob(), 600).unwrap_err().code,
+            ledger.transfer_from(&alice(), &bob(), 600).unwrap_err().code,
             APIError::InsufficientBalance
         );
 
@@ -495,9 +452,8 @@ mod tests {
         ledger.approve(&alice(), &bob(), 500);
         assert_eq!(ledger.balance(&alice()), 1000);
         assert_eq!(ledger.balance(&bob()), 0);
-        //ledger.transferFrom(&alice(), &bob(), 600);
         assert_eq!(
-            ledger.transferFrom(&alice(), &bob(), 600).unwrap_err().code,
+            ledger.transfer_from(&alice(), &bob(), 600).unwrap_err().code,
             APIError::InsufficientAllowance
         );
         // alowances didn't change
