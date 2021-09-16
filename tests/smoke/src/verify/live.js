@@ -78,7 +78,7 @@ const applyTransaction = (ledger, transaction) => {
 
     // decrement from
     let fromEntry = ledger[from];
-    fromEntry = fromEntry - cycles - fee;
+    fromEntry = (fromEntry - cycles) - fee;
     ledger[from] = fromEntry;
   }
 
