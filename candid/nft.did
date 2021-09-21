@@ -1,0 +1,98 @@
+type Balance = nat;
+type Memo = blob;
+type SubAccount = vec nat8;
+type TokenIdentifier = text;
+type TokenIndex = nat32;
+type AccountIdentifier = principal;
+
+type User =
+ variant {
+   address: AccountIdentifier;
+   "principal": principal;
+ };
+
+type TransferRequest =
+ record {
+   amount: Balance;
+   from: User;
+   memo: Memo;
+   notify: bool;
+   subaccount: opt SubAccount;
+   to: User;
+   token: TokenIdentifier;
+ };
+
+type TransferResponse =
+ variant {
+   err:
+    variant {
+      CannotNotify: AccountIdentifier;
+      InsufficientBalance;
+      InvalidToken: TokenIdentifier;
+      Other: text;
+      Rejected;
+      Unauthorized: AccountIdentifier;
+    };
+   ok: Balance;
+ };
+
+ type MintRequest =
+ record {
+   metadata: opt blob;
+   to: User;
+ };
+
+type CommonError =
+ variant {
+   InvalidToken: TokenIdentifier;
+   Other: text;
+ };
+
+ type PrincipalReturn =
+ variant {
+   err: CommonError;
+   ok: Principal;
+ };
+
+  type BalanceReturn =
+ variant {
+   err: CommonError;
+   ok: Principal;
+ };
+
+ type MetadataReturn =
+ variant {
+   err: CommonError;
+   ok: Metadata;
+ };
+
+ type TokenMetadata =
+ record {
+   "principal": Principal;
+   metadata: opt blob;
+   token_identifier: TokenIdentifier;
+ }
+
+ type Metadata =
+ variant {
+   fungible:
+    record {
+      decimals: nat8;
+      metadata: opt blob;
+      name: text;
+      symbol: text;
+    };
+   nonfungible: record {metadata: opt blob;};
+ };
+
+type erc721_token =
+ service {
+   transfer: (TransferRequest) -> (TransferResponse);
+   mintNFT: (MintRequest) -> (TokenIndex);
+   bearer: (TokenIdentifier) -> (PrincipalReturn) query;
+   getAllMetadataForUser: (User) -> vec TokenMetadata;
+   supply: (TokenIdentifier) -> (BalanceReturn);
+   metadata: (TokenIdentifier) -> (MetadataReturn);
+ };
+
+service : (principal) -> erc721_token

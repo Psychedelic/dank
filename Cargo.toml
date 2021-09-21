@@ -1,5 +1,7 @@
 [workspace]
 members = [
+    "common",
+    "nft",
     "xtc",
     "piggy-bank",
 #    History
