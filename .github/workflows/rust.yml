@@ -22,7 +22,8 @@ jobs:
     
     - name: Clippy Check
       uses: actions-rs/clippy-check@v1
-      args: -- -D warnings
+      with:
+        args: -- -D warnings
 
   test:
 
