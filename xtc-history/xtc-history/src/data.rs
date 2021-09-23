@@ -132,7 +132,7 @@ impl<Address> HistoryData<Address> {
     /// Return false if there is no bucket created yet.
     #[inline]
     pub fn bucket_exists(&self) -> bool {
-        self.buckets.len() > 0
+        !self.buckets.is_empty()
     }
 
     /// Return the transaction with the given id using the provided backend storage as type.
@@ -157,9 +157,9 @@ impl<Address> HistoryData<Address> {
         S: Backend<Address>,
         Address: Clone,
     {
-        let offset = offset.unwrap_or(self.size());
+        let offset = offset.unwrap_or_else(|| self.size());
         if offset >= self.bucket.get_offset() {
-            self.bucket.events(Some(offset), limit, || S::id())
+            self.bucket.events(Some(offset), limit, S::id)
         } else {
             EventsConnection {
                 data: Vec::new(),

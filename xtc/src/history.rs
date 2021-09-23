@@ -1,6 +1,6 @@
 use crate::stats::{CountTarget, StatsData};
-use ic_kit::macros::*;
-use ic_kit::{get_context, Context, Principal};
+use ic_kit::Principal;
+use ic_kit::{ic, macros::*};
 use xtc_history::data::{HistoryArchive, HistoryArchiveBorrowed};
 use xtc_history::History;
 
@@ -63,7 +63,7 @@ impl HistoryBuffer {
             TransactionKind::CanisterCreated { .. } => CountTarget::CanisterCreated,
         });
 
-        transaction.timestamp = transaction.timestamp / 1000000;
+        transaction.timestamp /= 1000000;
         self.history.push(transaction)
     }
 
@@ -75,15 +75,13 @@ impl HistoryBuffer {
 
 #[update]
 async fn get_transaction(id: TransactionId) -> Option<Transaction> {
-    let ic = get_context();
-    ic.get::<HistoryBuffer>().history.get_transaction(id).await
+    ic::get::<HistoryBuffer>().history.get_transaction(id).await
 }
 
 #[query]
 fn events(args: EventsArgs) -> EventsConnection<'static> {
-    let ic = get_context();
     let offset = args.offset;
     let limit = args.limit.min(512);
 
-    ic.get::<HistoryBuffer>().history.events(offset, limit)
+    ic::get::<HistoryBuffer>().history.events(offset, limit)
 }

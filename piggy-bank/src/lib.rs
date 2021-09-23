@@ -17,39 +17,34 @@ enum MintError {
 
 #[update]
 async fn perform_mint(args: PerformMintArgs) -> Result<u64, MintError> {
-    let ic = get_context();
-
     let account = match args.account {
         Some(account) => account,
-        None => ic.caller(),
+        None => ic::caller(),
     };
 
-    if ic.balance() < args.cycles {
+    if ic::balance() < args.cycles {
         return Err(MintError::NotSufficientLiquidity);
     }
 
-    match ic
-        .call_with_payment(args.canister, "mint", (Some(account),), args.cycles)
-        .await
-    {
+    match ic::call_with_payment(args.canister, "mint", (Some(account),), args.cycles).await {
         Ok((r,)) => r,
-        Err(e) => ic.trap(&format!("Call failed with code={:?}: {}", e.0, e.1)),
+        Err(e) => ic::trap(&format!("Call failed with code={:?}: {}", e.0, e.1)),
     }
 }
 
 #[update]
 fn balance() -> u64 {
-    get_context().balance()
+    ic::balance()
 }
 
 #[update]
 fn get_available_cycles() -> u64 {
-    get_context().msg_cycles_available()
+    ic::msg_cycles_available()
 }
 
 #[update]
 fn whoami() -> Principal {
-    get_context().caller()
+    ic::caller()
 }
 
 #[cfg(test)]

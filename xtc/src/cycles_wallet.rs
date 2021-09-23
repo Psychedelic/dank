@@ -11,8 +11,8 @@ use ic_kit::interfaces::management::{
     CanisterSettings, CreateCanister, CreateCanisterArgument, WithCanisterId,
 };
 use ic_kit::interfaces::Method;
-use ic_kit::macros::*;
-use ic_kit::{get_context, Context, Principal};
+use ic_kit::Principal;
+use ic_kit::{ic, macros::*};
 use serde::*;
 
 #[query]
@@ -40,42 +40,38 @@ pub struct CallResult {
 pub async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
     IsShutDown::guard();
 
-    let ic = get_context();
-    let caller = ic.caller();
+    let caller = ic::caller();
 
-    if ic.id() == args.canister {
+    if ic::id() == args.canister {
         return Err("Attempted to call forward on self. This is not allowed.".to_string());
     }
 
     let deduced_fee = compute_fee(args.cycles);
-    let ledger = ic.get_mut::<Ledger>();
+    let ledger = ic::get_mut::<Ledger>();
     ledger
         .withdraw(&caller, args.cycles + deduced_fee)
         .map_err(|_| "Insufficient Balance".to_string())?;
 
     let method_name = args.method_name.clone();
 
-    match ic
-        .call_raw(args.canister.clone(), &method_name, args.args, args.cycles)
-        .await
-    {
+    match ic::call_raw(args.canister, &method_name, args.args, args.cycles).await {
         Ok(x) => {
-            let refunded = ic.msg_cycles_refunded();
+            let refunded = ic::msg_cycles_refunded();
             let cycles = args.cycles - refunded;
             let actual_fee = compute_fee(cycles);
             let refunded = refunded + (deduced_fee - actual_fee);
             let transaction = Transaction {
-                timestamp: ic.time(),
+                timestamp: ic::time(),
                 cycles,
                 fee: actual_fee,
                 kind: TransactionKind::CanisterCalled {
-                    from: caller.clone(),
-                    canister: args.canister.clone(),
+                    from: caller,
+                    canister: args.canister,
                     method_name: args.method_name,
                 },
             };
 
-            ic.get_mut::<HistoryBuffer>().push(transaction);
+            ic::get_mut::<HistoryBuffer>().push(transaction);
 
             if refunded > 0 {
                 ledger.deposit(&caller, refunded);
@@ -105,11 +101,10 @@ pub struct CreateCanisterArgs {
 pub async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId, String> {
     IsShutDown::guard();
 
-    let ic = get_context();
-    let caller = ic.caller();
+    let caller = ic::caller();
 
     let deduced_fee = compute_fee(args.cycles);
-    let ledger = ic.get_mut::<Ledger>();
+    let ledger = ic::get_mut::<Ledger>();
     ledger
         .withdraw(&caller, args.cycles + deduced_fee)
         .map_err(|_| "Insufficient Balance".to_string())?;
@@ -131,21 +126,21 @@ pub async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId,
     .await
     {
         Ok((r,)) => {
-            let refunded = ic.msg_cycles_refunded();
+            let refunded = ic::msg_cycles_refunded();
             let cycles = args.cycles - refunded;
             let actual_fee = compute_fee(cycles);
             let refunded = refunded + (deduced_fee - actual_fee);
             let transaction = Transaction {
-                timestamp: ic.time(),
+                timestamp: ic::time(),
                 cycles,
                 fee: actual_fee,
                 kind: TransactionKind::CanisterCreated {
-                    from: caller.clone(),
+                    from: caller,
                     canister: r.canister_id,
                 },
             };
 
-            ic.get_mut::<HistoryBuffer>().push(transaction);
+            ic::get_mut::<HistoryBuffer>().push(transaction);
 
             if refunded > 0 {
                 ledger.deposit(&caller, refunded);
@@ -172,9 +167,8 @@ pub struct BalanceResult {
 
 #[query]
 pub fn wallet_balance() -> BalanceResult {
-    let ic = get_context();
-    let ledger = ic.get::<Ledger>();
-    let amount = ledger.balance(&ic.caller());
+    let ledger = ic::get::<Ledger>();
+    let amount = ledger.balance(&ic::caller());
     BalanceResult { amount }
 }
 
@@ -188,11 +182,10 @@ pub struct SendCyclesArgs {
 pub async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
     IsShutDown::guard();
 
-    let ic = get_context();
-    let caller = ic.caller();
+    let caller = ic::caller();
 
     let deduced_fee = compute_fee(args.amount);
-    let ledger = ic.get_mut::<Ledger>();
+    let ledger = ic::get_mut::<Ledger>();
     ledger
         .withdraw(&caller, args.amount + deduced_fee)
         .map_err(|_| String::from("Insufficient balance."))?;
@@ -202,36 +195,29 @@ pub async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
         canister_id: Principal,
     }
 
-    let (result, refunded) = match ic
-        .call_with_payment(
-            args.canister.clone(),
-            "wallet_receive",
-            (),
-            args.amount.into(),
-        )
-        .await
-    {
-        Ok(()) => {
-            let refunded = ic.msg_cycles_refunded();
-            let cycles = args.amount - refunded;
-            let actual_fee = compute_fee(cycles);
-            let refunded = refunded + (deduced_fee - actual_fee);
-            let transaction = Transaction {
-                timestamp: ic.time(),
-                cycles,
-                fee: actual_fee,
-                kind: TransactionKind::Burn {
-                    from: caller.clone(),
-                    to: args.canister,
-                },
-            };
+    let (result, refunded) =
+        match ic::call_with_payment(args.canister, "wallet_receive", (), args.amount).await {
+            Ok(()) => {
+                let refunded = ic::msg_cycles_refunded();
+                let cycles = args.amount - refunded;
+                let actual_fee = compute_fee(cycles);
+                let refunded = refunded + (deduced_fee - actual_fee);
+                let transaction = Transaction {
+                    timestamp: ic::time(),
+                    cycles,
+                    fee: actual_fee,
+                    kind: TransactionKind::Burn {
+                        from: caller,
+                        to: args.canister,
+                    },
+                };
 
-            ic.get_mut::<HistoryBuffer>().push(transaction);
+                ic::get_mut::<HistoryBuffer>().push(transaction);
 
-            (Ok(()), refunded)
-        }
-        Err(_) => (Err("Call failed.".into()), args.amount + deduced_fee),
-    };
+                (Ok(()), refunded)
+            }
+            Err(_) => (Err("Call failed.".into()), args.amount + deduced_fee),
+        };
 
     if refunded > 0 {
         ledger.deposit(&caller, refunded);
@@ -242,9 +228,8 @@ pub async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
 
 #[update]
 pub async fn wallet_create_wallet(_: CreateCanisterArgs) -> Result<WithCanisterId, String> {
-    let ic = get_context();
     crate::progress().await;
     Ok(WithCanisterId {
-        canister_id: ic.id(),
+        canister_id: ic::id(),
     })
 }

@@ -1,11 +1,10 @@
 use crate::fee::compute_fee;
 use crate::history::{HistoryBuffer, Transaction, TransactionId, TransactionKind};
 use crate::management::IsShutDown;
-use crate::meta::meta;
 use crate::stats::StatsData;
 use ic_kit::candid::{CandidType, Nat};
-use ic_kit::macros::*;
-use ic_kit::{get_context, Context, Principal};
+use ic_kit::Principal;
+use ic_kit::{ic, macros::*};
 use serde::*;
 use std::collections::HashMap;
 
@@ -68,7 +67,7 @@ impl Ledger {
     ) -> Result<(), ErrorDetails> {
         let allowance = self.allowances(allower, spender);
         if allowance < amount {
-            return Err(InsufficientAllowanceError.clone());
+            return Err(INSUFFICIENT_ALLOWANCE_ERROR.clone());
         }
 
         self.approve(allower, spender, allowance - amount);
@@ -85,7 +84,7 @@ impl Ledger {
         to: &Principal,
         amount: u64,
     ) -> Result<(), ErrorDetails> {
-        self.withdrawErc20(from, amount)?;
+        self.withdraw_erc20(from, amount)?;
         self.deposit(to, amount);
         Ok(())
     }
@@ -102,17 +101,17 @@ impl Ledger {
     }
 
     #[inline]
-    pub fn withdrawErc20(&mut self, account: &Principal, amount: u64) -> Result<(), ErrorDetails> {
-        let balance = match self.balances.get_mut(&account) {
+    pub fn withdraw_erc20(&mut self, account: &Principal, amount: u64) -> Result<(), ErrorDetails> {
+        let balance = match self.balances.get_mut(account) {
             Some(balance) if *balance >= amount => {
                 *balance -= amount;
                 *balance
             }
-            _ => return Err(InsufficientBalanceError.clone()),
+            _ => return Err(INSUFFICIENT_BALANCE_ERROR.clone()),
         };
 
         if balance == 0 {
-            self.balances.remove(&account);
+            self.balances.remove(account);
         }
 
         StatsData::withdraw(amount);
@@ -122,7 +121,7 @@ impl Ledger {
 
     #[inline]
     pub fn withdraw(&mut self, account: &Principal, amount: u64) -> Result<(), ()> {
-        let balance = match self.balances.get_mut(&account) {
+        let balance = match self.balances.get_mut(account) {
             Some(balance) if *balance >= amount => {
                 *balance -= amount;
                 *balance
@@ -131,7 +130,7 @@ impl Ledger {
         };
 
         if balance == 0 {
-            self.balances.remove(&account);
+            self.balances.remove(account);
         }
 
         StatsData::withdraw(amount);
@@ -153,32 +152,31 @@ pub struct ErrorDetails {
     code: APIError,
 }
 
-static InsufficientBalanceError: ErrorDetails = ErrorDetails {
+const INSUFFICIENT_BALANCE_ERROR: ErrorDetails = ErrorDetails {
     msg: "Insufficient Balance",
     code: APIError::InsufficientBalance,
 };
 
-static InsufficientAllowanceError: ErrorDetails = ErrorDetails {
+const INSUFFICIENT_ALLOWANCE_ERROR: ErrorDetails = ErrorDetails {
     msg: "Insufficient Allowance",
     code: APIError::InsufficientAllowance,
 };
 
-static UnknownError: ErrorDetails = ErrorDetails {
+const UNKNOWN_ERROR: ErrorDetails = ErrorDetails {
     msg: "Unknown",
     code: APIError::Unknown,
 };
 
-#[query]
-fn totalSupply() -> Nat {
+#[query(name = "totalSupply")]
+fn total_supply() -> Nat {
     StatsData::get().supply
 }
 
 #[update]
 pub async fn balance(account: Option<Principal>) -> u64 {
-    let ic = get_context();
-    let caller = ic.caller();
+    let caller = ic::caller();
     crate::progress().await;
-    let ledger = ic.get::<Ledger>();
+    let ledger = ic::get::<Ledger>();
     ledger.balance(&account.unwrap_or(caller))
 }
 
@@ -201,20 +199,19 @@ pub enum TransferError {
 pub async fn transfer(args: TransferArguments) -> Result<TransactionId, TransferError> {
     IsShutDown::guard();
 
-    let ic = get_context();
-    let caller = ic.caller();
+    let caller = ic::caller();
 
     crate::progress().await;
 
     let fee = compute_fee(args.amount);
-    let ledger = ic.get_mut::<Ledger>();
+    let ledger = ic::get_mut::<Ledger>();
     ledger
         .withdraw(&caller, args.amount + fee)
         .map_err(|_| TransferError::InsufficientBalance)?;
     ledger.deposit(&args.to, args.amount);
 
     let transaction = Transaction {
-        timestamp: ic.time(),
+        timestamp: ic::time(),
         cycles: args.amount,
         fee,
         kind: TransactionKind::Transfer {
@@ -223,7 +220,7 @@ pub async fn transfer(args: TransferArguments) -> Result<TransactionId, Transfer
         },
     };
 
-    let id = ic.get_mut::<HistoryBuffer>().push(transaction);
+    let id = ic::get_mut::<HistoryBuffer>().push(transaction);
     Ok(id)
 }
 
@@ -236,33 +233,32 @@ pub enum MintError {
 pub async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
     IsShutDown::guard();
 
-    let ic = get_context();
-    let caller = ic.caller();
+    let caller = ic::caller();
 
     crate::progress().await;
 
     let account = account.unwrap_or(caller);
-    let available = ic.msg_cycles_available();
+    let available = ic::msg_cycles_available();
     let fee = compute_fee(available);
 
     if available <= fee {
         panic!("Cannot mint less than {}", fee);
     }
 
-    let accepted = ic.msg_cycles_accept(available);
+    let accepted = ic::msg_cycles_accept(available);
     let cycles = accepted - fee;
 
-    let ledger = ic.get_mut::<Ledger>();
+    let ledger = ic::get_mut::<Ledger>();
     ledger.deposit(&account, cycles);
 
     let transaction = Transaction {
-        timestamp: ic.time(),
+        timestamp: ic::time(),
         cycles,
         fee,
         kind: TransactionKind::Mint { to: account },
     };
 
-    let id = ic.get_mut::<HistoryBuffer>().push(transaction);
+    let id = ic::get_mut::<HistoryBuffer>().push(transaction);
     Ok(id)
 }
 
@@ -283,11 +279,10 @@ pub enum BurnError {
 pub async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
     IsShutDown::guard();
 
-    let ic = get_context();
-    let caller = ic.caller();
+    let caller = ic::caller();
 
     let deduced_fee = compute_fee(args.amount);
-    let ledger = ic.get_mut::<Ledger>();
+    let ledger = ic::get_mut::<Ledger>();
     ledger
         .withdraw(&caller, args.amount + deduced_fee)
         .map_err(|_| BurnError::InsufficientBalance)?;
@@ -301,31 +296,30 @@ pub async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
         canister_id: args.canister_id,
     };
 
-    let (result, refunded) = match ic
-        .call_with_payment(
-            Principal::management_canister(),
-            "deposit_cycles",
-            (deposit_cycles_arg,),
-            args.amount.into(),
-        )
-        .await
+    let (result, refunded) = match ic::call_with_payment(
+        Principal::management_canister(),
+        "deposit_cycles",
+        (deposit_cycles_arg,),
+        args.amount,
+    )
+    .await
     {
         Ok(()) => {
-            let refunded = ic.msg_cycles_refunded();
+            let refunded = ic::msg_cycles_refunded();
             let cycles = args.amount - refunded;
             let actual_fee = compute_fee(cycles);
             let refunded = refunded + (deduced_fee - actual_fee);
             let transaction = Transaction {
-                timestamp: ic.time(),
+                timestamp: ic::time(),
                 cycles,
                 fee: actual_fee,
                 kind: TransactionKind::Burn {
-                    from: caller.clone(),
+                    from: caller,
                     to: args.canister_id,
                 },
             };
 
-            let id = ic.get_mut::<HistoryBuffer>().push(transaction);
+            let id = ic::get_mut::<HistoryBuffer>().push(transaction);
 
             (Ok(id), refunded)
         }
@@ -416,7 +410,7 @@ mod tests {
         ledger.approve(&alice(), &bob(), 1000);
         assert_eq!(ledger.balance(&alice()), 500);
         assert_eq!(ledger.balance(&bob()), 0);
-        ledger.transfer_from(&alice(), &bob(), 400);
+        ledger.transfer_from(&alice(), &bob(), 400).unwrap();
         // alowances changed
         assert_eq!(ledger.allowances(&alice(), &bob()), 600);
         // balances changed

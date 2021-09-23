@@ -119,7 +119,7 @@ impl<Address, Event> BucketData<Address, Event> {
 
         let (offset, limit) = if offset > max {
             let d = (offset - max) as usize;
-            (max, limit.checked_sub(d).unwrap_or(0))
+            (max, limit.saturating_sub(d))
         } else {
             (offset, limit)
         };
@@ -132,7 +132,7 @@ impl<Address, Event> BucketData<Address, Event> {
 
         let take = limit + 1;
         let end = (offset - bucket_offset) as usize;
-        let start = end.checked_sub(take).unwrap_or(0);
+        let start = end.saturating_sub(take);
         let mut data: &[Event] = &self.events[start..end];
 
         let has_more = if data.len() > limit {
@@ -152,7 +152,7 @@ impl<Address, Event> BucketData<Address, Event> {
         };
 
         EventsConnection {
-            data: data.into_iter().rev().collect(),
+            data: data.iter().rev().collect(),
             next_offset,
             next_canister_id,
         }
@@ -177,6 +177,12 @@ impl<Address, Event> BucketData<Address, Event> {
     #[inline]
     pub fn len(&self) -> usize {
         self.events.len()
+    }
+
+    /// Returns `true` if the bucket contains no events.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.events.is_empty()
     }
 
     /// Update the id of the next canister.

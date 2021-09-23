@@ -48,6 +48,11 @@ impl<Address: Clone + std::cmp::PartialEq, Storage: Backend<Address>> History<Ad
     }
 
     #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
+    #[inline]
     pub async fn get_transaction(&self, id: TransactionId) -> Option<Transaction> {
         self.data.get_transaction::<Storage>(id).await
     }

@@ -3,8 +3,8 @@ use crate::ledger::Ledger;
 use crate::management;
 use crate::stats::{StatsData, StatsDataV0};
 use ic_kit::candid::CandidType;
-use ic_kit::macros::*;
-use ic_kit::{get_context, Context, Principal};
+use ic_kit::Principal;
+use ic_kit::{ic, macros::*};
 use serde::Deserialize;
 use xtc_history::data::{HistoryArchive, HistoryArchiveBorrowed};
 
@@ -34,9 +34,8 @@ struct StableStorage {
 
 #[pre_upgrade]
 pub fn pre_upgrade() {
-    let ic = get_context();
-    let ledger = ic.get_mut::<Ledger>().archive();
-    let history = ic.get_mut::<HistoryBuffer>().archive();
+    let ledger = ic::get_mut::<Ledger>().archive();
+    let history = ic::get_mut::<HistoryBuffer>().archive();
     let controller = management::Controller::get_principal();
 
     let stable = StableStorageBorrowed {
@@ -46,7 +45,7 @@ pub fn pre_upgrade() {
         stats: StatsData::get(),
     };
 
-    match ic.stable_store((stable,)) {
+    match ic::stable_store((stable,)) {
         Ok(_) => (),
         Err(candid_err) => {
             panic!(
@@ -59,12 +58,10 @@ pub fn pre_upgrade() {
 
 #[post_upgrade]
 pub fn post_upgrade() {
-    let ic = get_context();
-    let (stable,) = ic
-        .stable_restore::<(StableStorageV0,)>()
-        .expect("Failed to read from stable storage.");
-    ic.get_mut::<Ledger>().load(stable.ledger);
-    ic.get_mut::<HistoryBuffer>().load(stable.history);
+    let (stable,) =
+        ic::stable_restore::<(StableStorageV0,)>().expect("Failed to read from stable storage.");
+    ic::get_mut::<Ledger>().load(stable.ledger);
+    ic::get_mut::<HistoryBuffer>().load(stable.history);
     management::Controller::load(stable.controller);
     StatsData::load(stable.stats.into());
 }

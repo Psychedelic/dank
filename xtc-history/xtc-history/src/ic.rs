@@ -87,7 +87,7 @@ impl Backend<Principal> for IcBackend {
             arg: Vec<u8>,
         }
 
-        let canister_id = canister_id.clone();
+        let canister_id = *canister_id;
 
         Box::pin(async move {
             let install_config = CanisterInstall {
@@ -121,7 +121,7 @@ impl Backend<Principal> for IcBackend {
         canister_id: &Principal,
         metadata: SetBucketMetadataArgs<Principal>,
     ) -> Res<()> {
-        let id = canister_id.clone();
+        let id = *canister_id;
 
         Box::pin(async move {
             match call::call(id, "set_metadata", (metadata,)).await {
@@ -139,7 +139,7 @@ impl Backend<Principal> for IcBackend {
     }
 
     fn append_transactions(canister_id: &Principal, data: &[Transaction]) -> Res<()> {
-        let id = canister_id.clone();
+        let id = *canister_id;
         let args_result = encode_args((data,));
 
         Box::pin(async move {
@@ -160,7 +160,7 @@ impl Backend<Principal> for IcBackend {
     }
 
     fn lookup_transaction(canister_id: &Principal, id: TransactionId) -> Res<Option<Transaction>> {
-        let canister_id = canister_id.clone();
+        let canister_id = *canister_id;
 
         Box::pin(async move {
             let res: Option<Transaction> =

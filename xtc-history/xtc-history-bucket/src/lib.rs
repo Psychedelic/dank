@@ -5,18 +5,10 @@ use serde::Deserialize;
 use xtc_history_common::bucket::*;
 use xtc_history_common::types::*;
 
+#[derive(Default)]
 pub struct Data {
     bucket: BucketData,
     controller: Option<Principal>,
-}
-
-impl Default for Data {
-    fn default() -> Self {
-        Self {
-            bucket: BucketData::default(),
-            controller: None,
-        }
-    }
 }
 
 #[init]
@@ -79,5 +71,5 @@ fn get_transaction(id: TransactionId) -> Option<&'static Transaction> {
 fn events(args: EventsArgs) -> EventsConnection<'static> {
     storage::get::<Data>()
         .bucket
-        .events(args.offset, args.limit as usize, || id())
+        .events(args.offset, args.limit as usize, id)
 }

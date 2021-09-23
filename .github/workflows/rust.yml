@@ -1,10 +1,10 @@
 name: Dank Test/Coverage Runner
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+# on:
+#   push:
+#     branches: [ main ]
+#   pull_request:
+#     branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -16,8 +16,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Lint
+
+    - name: Formatting Check
       run: cargo fmt --all -- --check
+    
+    - name: Clippy Check
+      uses: actions-rs/clippy-check@v1
+      args: -- -D warnings
 
   test:
 

@@ -1,7 +1,6 @@
 use crate::history::HistoryBuffer;
 use ic_kit::candid::{CandidType, Nat};
-use ic_kit::macros::*;
-use ic_kit::{get_context, Context};
+use ic_kit::{ic, macros::*};
 use serde::Deserialize;
 
 #[derive(Deserialize, CandidType, Clone, Default)]
@@ -58,24 +57,21 @@ pub enum CountTarget {
 impl StatsData {
     #[inline]
     pub fn load(data: StatsData) {
-        let ic = get_context();
-        let stats = ic.get_mut::<StatsData>();
+        let stats = ic::get_mut::<StatsData>();
         *stats = data;
     }
 
     #[inline]
     pub fn get() -> StatsData {
-        let ic = get_context();
-        let stats = ic.get_mut::<StatsData>();
-        stats.history_events = ic.get::<HistoryBuffer>().len() as u64;
-        stats.balance = ic.balance();
+        let stats = ic::get_mut::<StatsData>();
+        stats.history_events = ic::get::<HistoryBuffer>().len() as u64;
+        stats.balance = ic::balance();
         stats.clone()
     }
 
     #[inline]
     pub fn increment(target: CountTarget) {
-        let ic = get_context();
-        let stats = ic.get_mut::<StatsData>();
+        let stats = ic::get_mut::<StatsData>();
         match target {
             CountTarget::Transfer => stats.transfers_count += 1,
             CountTarget::Mint => stats.mints_count += 1,
@@ -87,22 +83,19 @@ impl StatsData {
 
     #[inline]
     pub fn deposit(amount: u64) {
-        let ic = get_context();
-        let stats = ic.get_mut::<StatsData>();
+        let stats = ic::get_mut::<StatsData>();
         stats.supply += amount;
     }
 
     #[inline]
     pub fn withdraw(amount: u64) {
-        let ic = get_context();
-        let stats = ic.get_mut::<StatsData>();
+        let stats = ic::get_mut::<StatsData>();
         stats.supply -= amount;
     }
 
     #[inline]
     pub fn capture_fee(amount: u64) {
-        let ic = get_context();
-        let stats = ic.get_mut::<StatsData>();
+        let stats = ic::get_mut::<StatsData>();
         stats.fee += amount;
     }
 }

@@ -1,3 +1,7 @@
+#![allow(dead_code)]
+
+use ic_kit::ic;
+
 mod cycles_wallet;
 mod fee;
 mod history;
@@ -18,10 +22,7 @@ mod tests;
 /// be more things following this design pattern for handling tasks.
 #[inline]
 pub async fn progress() -> bool {
-    use ic_kit::{get_context, Context};
-
-    let ic = get_context();
-    let history = ic.get_mut::<history::HistoryBuffer>();
+    let history = ic::get_mut::<history::HistoryBuffer>();
     history.progress().await
 }
 

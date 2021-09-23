@@ -66,7 +66,7 @@ impl Backend<MockCanisterId> for MockBackend {
         let res = if bucket.len() + data.len() > MOCK_BUCKET_CAPACITY {
             Err("Memory overflow.".to_string())
         } else {
-            bucket.append(&mut data.into_iter().cloned().collect());
+            bucket.append(&mut data.to_vec());
             Ok(())
         };
         Box::pin(async move { res })
