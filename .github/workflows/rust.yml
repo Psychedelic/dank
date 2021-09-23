@@ -1,6 +1,10 @@
 name: Dank Test/Coverage Runner
 
-on: push
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
