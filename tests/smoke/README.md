@@ -50,3 +50,13 @@ To run:
 ```shell
 yarn whales:live
 ```
+
+### User History
+
+Show a users transaction history
+
+To run:
+
+```shell
+yarn userhistory:live 5jehy-ivhe5-cxbh3-dkc2n-4d3cb-4u34q-3uo77-5z4r2-kdivi-lgsn2-uae
+```
