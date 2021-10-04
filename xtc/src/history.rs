@@ -14,7 +14,7 @@ pub struct HistoryBuffer {
 impl Default for HistoryBuffer {
     fn default() -> Self {
         HistoryBuffer {
-            history: History::<Principal, IcBackend>::new(5_000, 2000),
+            history: History::<Principal, IcBackend>::new(4_300_000, 2000),
         }
     }
 }
