@@ -13,5 +13,5 @@ rustup default nightly
 
 rustup target add wasm32-unknown-unknown
 
-apt-get update -y
+apt-get update -y -o Acquire::https::deb.nodesource.com::Verify-Peer=false
 apt-get install -y libssl-dev pkg-config
