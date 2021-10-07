@@ -153,7 +153,7 @@ impl Ledger {
                 *balance -= total_amount;
                 *balance
             }
-            _ if amount + fee == 0 => return Ok(()),
+            _ if total_amount == 0 => return Ok(()),
             _ => return Err(TxError::InsufficientBalance),
         };
 
@@ -161,7 +161,7 @@ impl Ledger {
             self.balances.remove(&account);
         }
 
-        StatsData::withdraw(amount);
+        StatsData::withdraw(total_amount);
 
         Ok(())
     }
