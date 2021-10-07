@@ -9,6 +9,7 @@
     "backup:live": "node ./src/backup/live.js",
     "verify:live": "node ./src/verify/live.js",
     "whales:live": "node ./src/whales/live.js",
+    "userhistory:live": "node ./src/userhistory/live.js",
     "format": "prettier --write \"./src/**/*.{ts,tsx,js,jsx}\"",
     "format:check": "prettier --check \"./src/**/*.{ts,tsx,js,jsx}\""
   },

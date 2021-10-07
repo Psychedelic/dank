@@ -1,3 +1,52 @@
+////////// BEGIN ERC-20 //////////
+
+type Time = int;
+
+type Operation =
+ variant {
+   approve;
+   mint;
+   transfer;
+   transferFrom;
+   burn;
+   canisterCalled;
+   canisterCreated;
+ };
+
+type Metadata =
+ record {
+   decimals: nat8;
+   fee: nat;
+   logo: text;
+   name: text;
+   owner: principal;
+   symbol: text;
+   totalSupply: nat;
+ };
+
+type TxRecord =
+ record {
+   caller: opt principal;
+   from: principal;
+   to: principal;
+   amount: nat;
+   fee: nat;
+   op: Operation;
+   timestamp: Time;
+   index: nat;
+ };
+
+type TxReceipt =
+ variant {
+   Err: variant {
+          InsufficientAllowance;
+          InsufficientBalance;
+        };
+   Ok: nat;
+ };
+
+////////// END ERC-20 //////////
+
 type TransactionId = nat64;
 
 type BurnError = variant {
@@ -64,6 +113,15 @@ type EventDetail = variant {
         from : principal;
         canister : principal;
     };
+    TransferFrom : record {
+        caller : principal;
+        from : principal;
+        to   : principal;
+    };
+    Approve : record {
+        from : principal;
+        to   : principal;
+    };
 };
 
 type Event = record {
@@ -93,6 +151,8 @@ type Stats = record {
     balance: nat64;
     // Usage statistics
     transfers_count: nat64;
+    transfers_from_count: nat64;
+    approvals_count: nat64;
     mints_count: nat64;
     burns_count: nat64;
     proxy_calls_count: nat64;
@@ -105,6 +165,24 @@ type ResultSend = variant {
 };
 
 service : {
+
+   ////////// BEGIN ERC-20 //////////
+   allowance: (principal, principal) -> (nat) query;
+   approve: (principal, nat) -> (TxReceipt);
+   balanceOf: (principal) -> (nat) query;
+   decimals: () -> (nat8) query;
+   getMetadata: () -> (Metadata) query;
+   getTransaction: (nat) -> (TxRecord);
+   getTransactions: (nat, nat) -> (vec TxRecord);
+   historySize: () -> (nat) query;
+   logo: () -> (text) query;
+   nameErc20: () -> (text) query;
+   symbol: () -> (text) query;
+   totalSupply: () -> (nat) query;
+   transferErc20: (principal, nat) -> (TxReceipt);
+   transferFrom: (principal, principal, nat) -> (TxReceipt);
+   ////////// END ERC-20 //////////
+
     // Return all of the meta data of a token.
     meta : () -> (TokenMetaData) query;
 

@@ -1,3 +1,6 @@
+#![allow(warnings)]
+
+mod common_types;
 mod cycles_wallet;
 mod fee;
 mod history;
@@ -6,6 +9,7 @@ mod management;
 mod meta;
 mod stats;
 mod upgrade;
+mod utils;
 
 #[cfg(test)]
 mod tests;
