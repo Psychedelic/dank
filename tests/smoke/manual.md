@@ -36,7 +36,7 @@ dfx canister call piggy-bank perform_mint "(record { canister= principal \"$xtcI
 
 # Check the stats
 dfx canister call xtc stats
-# Supply should be 10_000_000_000_000
+# Supply should be 9_998_000_000_000
 # Mint count should be 1
 # fee should be 2_000_000_000
 # history_events should be 1
@@ -103,7 +103,7 @@ dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
 # expect transfer amount (1000)
 
 dfx canister call xtc stats
-# expect supply remains 10TC
+# expect supply is 9_996_000_000_000 (10TC - 2 fees)
 # expect transfer count is 1
 # expect fee to be 4_000_000_000
 # expect history_events to be 2
@@ -119,7 +119,6 @@ dfx canister call xtc balance "(opt principal \"$principalId\")"
 dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
 
 dfx canister --no-wallet call xtc transfer "(record { to= principal \"$principalId\"; amount= (1000:nat64) })"
-
 # Insufficient balance due to fees
 
 dfx identity use manual-test-1 
@@ -135,14 +134,14 @@ dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
 # should be 0
 
 dfx canister call xtc balance "(opt principal \"$principalId\")"
-# should be back to 9_990_000_000_000 (10TC minus fees)
+# should be back to 9_992_000_000_000 (10TC minus fees)
 
 dfx canister call xtc stats
-# expect supply remains 10TC
-# expect transfer count is 2
-# expect history_events to be 3
+# expect supply remains 9_992_000_000_000 (10TC minus fees)
+# expect transfer count is 3
+# expect history_events to be 4
 
-dfx canister call xtc get_transaction "(4)"
+dfx canister call xtc get_transaction "(3)"
 
 dfx canister call xtc events "record { limit= 5: nat16 }"
 # should show the 3 transactions, with the last transfer as the first entry, matching
@@ -153,12 +152,12 @@ Transfer 0 cycles should be accepted but charge a fee
 
 ```shell
 # as identity 1 
+dfx identity use manual-test-1
 dfx canister --no-wallet call xtc transfer "(record { to= principal \"$secondPrincipalId\"; amount= (0:nat64) })"
-
 # transaction goes through
 
 dfx canister call xtc balance "(null)"
-# 9_996_000_000_000 - fee taken
+# 9_990_000_000_000 - fee taken
 ```
 
 ## Burn
@@ -239,7 +238,7 @@ dfx canister call xtc events "record { limit= 10: nat16 }"
 
 dfx canister call xtc stats
 # Supply should have dropped by creation amount
-# history_events increments to 6
+# history_events increments to 2
 # fees to have an addition 2 billion
 # canister_created_count is 1
 ```
@@ -248,7 +247,6 @@ Create a canister with more cycles than is in balance
 
 ```shell
 dfx canister --no-wallet call xtc wallet_create_canister "(record {cycles= (100_000_000_000_000:nat64); controller= (null); })"
-
 # expect insufficient balance
 ```
 
@@ -294,7 +292,7 @@ dfx canister call xtc wallet_call "(record { canister= principal \"$walletId\"; 
 dfx canister call xtc balance "(null)"
 # balance decremented by 1000 + fee (2 billion)
 
-dfx canister call xtc get_transaction "(5)"
+dfx canister call xtc get_transaction "(7)"
 # expect transaction with from, method_name, canister
 dfx canister call xtc events "record { limit= 10: nat16 }"
 
@@ -311,6 +309,60 @@ dfx canister call xtc balance "(null)"
 dfx canister call xtc wallet_call "(record { canister= principal \"$walletId\"; method_name= \"wallet_receive\"; args= blob \"DIDL\01nh\01\00\00\"; cycles= (100_000_000_000_000:nat64); })"
 
 # (variant { Err = "Insufficient Balance" })
+```
+
+## Approvals
+
+Transfer via an approval and claim.
+
+```shell
+# use identity 1s fortune to setup the allowances
+dfx identity use manual-test-1
+
+# check allowances
+dfx canister --no-wallet call xtc allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
+# expect 0
+
+dfx canister --no-wallet call xtc approve "(principal \"$secondPrincipalId\", (2000:nat))"
+
+# Check updated allowance
+dfx canister --no-wallet call xtc allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
+# expect 2000
+
+# Send enough to pay the fees
+dfx canister --no-wallet call xtc transfer "(record { to= principal \"$secondPrincipalId\"; amount= (2_000_000_000:nat64) })"
+
+dfx identity use manual-test-2  
+
+# attempt to transfer too much
+dfx canister --no-wallet call xtc transferFrom "(principal \"$principalId\", principal \"$secondPrincipalId\", (2001:nat))"
+# InsufficientAllowance
+
+# actually transfer part of the allowance
+dfx canister --no-wallet call xtc transferFrom "(principal \"$principalId\", principal \"$secondPrincipalId\", (1000:nat))"
+
+# Check updated allowance
+dfx canister --no-wallet call xtc allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
+# should be 1000
+
+dfx canister --no-wallet call xtc transferFrom "(principal \"$principalId\", principal \"$secondPrincipalId\", (1000:nat))"
+
+# Check updated allowance
+dfx canister --no-wallet call xtc allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
+# should be 0
+
+# try tranferring again - should fail as allowance consumed
+dfx canister --no-wallet call xtc transferFrom "(principal \"$principalId\", principal \"$secondPrincipalId\", (1:nat))"
+# InsufficientAllowance
+
+dfx canister --no-wallet call xtc balance "(opt principal \"$secondPrincipalId\")"
+# should be 2_000
+
+dfx canister call xtc get_transaction "(10)"
+# Should be of the TransferFrom type
+# to/from/caller
+
+dfx canister call xtc events "record { limit= 5: nat16 }"
 ```
 
 ## Transaction
