@@ -24,6 +24,15 @@ pub enum TransactionKind {
         from: Principal,
         canister: Principal,
     },
+    TransferFrom {
+        caller: Principal,
+        from: Principal,
+        to: Principal,
+    },
+    Approve {
+        from: Principal,
+        to: Principal,
+    },
 }
 
 #[derive(CandidType, Clone, Deserialize, PartialOrd, PartialEq, Debug)]
