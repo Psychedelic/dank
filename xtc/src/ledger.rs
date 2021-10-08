@@ -436,12 +436,8 @@ pub async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
 
             (Ok(id), refunded)
         }
-        Err(_) => (
-            Err(BurnError::InvalidTokenContract),
-            args.amount + deduced_fee,
-        ),
+        Err(_) => (Err(BurnError::InvalidTokenContract), args.amount),
     };
-
     if refunded > 0 {
         ledger.deposit(&caller, refunded);
     }

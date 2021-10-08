@@ -84,7 +84,7 @@ pub async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
             Ok(CallResult { r#return: x })
         }
         Err((code, msg)) => {
-            ledger.deposit(&caller, args.cycles + deduced_fee);
+            ledger.deposit(&caller, args.cycles);
             Err(format!(
                 "An error happened during the call: {}: {}",
                 code as u8, msg
@@ -154,7 +154,7 @@ pub async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId,
             r
         }
         Err((code, msg)) => {
-            ledger.deposit(&caller, args.cycles + deduced_fee);
+            ledger.deposit(&caller, args.cycles);
             return Err(format!(
                 "An error happened during the call: {}: {}",
                 code as u8, msg
@@ -230,7 +230,7 @@ pub async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
 
             (Ok(()), refunded)
         }
-        Err(_) => (Err("Call failed.".into()), args.amount + deduced_fee),
+        Err(_) => (Err("Call failed.".into()), args.amount),
     };
 
     if refunded > 0 {
