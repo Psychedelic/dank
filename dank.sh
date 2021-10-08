@@ -30,7 +30,6 @@ allowance(){
     pem=$AlicePem
     from="${nameToPrincipal[$1]}"
     to="${nameToPrincipal[$2]}"
-    echo icx --pem=$pem query $xtcID allowance "(principal \"$from\", principal \"$to\")" $icxPrologueXtc
     icx --pem=$pem query $xtcID allowance "(principal \"$from\", principal \"$to\")" $icxPrologueXtc
 }
 
@@ -61,7 +60,7 @@ name(){
 
 nameLegacy(){
     pem=$AlicePem
-    icx --pem=$pem query $xtcID nameErc20 "()" $icxPrologueXtc
+    icx --pem=$pem query $xtcID name "()" $icxPrologueXtc
 }
 
 symbol(){
