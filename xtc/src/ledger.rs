@@ -64,7 +64,8 @@ impl Ledger {
         if amount == 0 {
             self.cleanup_allowances(allower, spender);
         } else {
-            *(self.allowances.entry((*allower, *spender)).or_default()) = amount;
+            // the allower will pay for the future transferFrom fees, so the total allowed amount equals to amount + fee
+            *(self.allowances.entry((*allower, *spender)).or_default()) = amount + fee;
         }
 
         Ok(())
@@ -95,17 +96,18 @@ impl Ledger {
     ) -> Result<(), TxError> {
         assert_ne!(amount, 0, "transfer amount cannot be zero");
 
+        let total_amount = amount + fee;
         let allowance = self.allowance(allower, caller);
-        if allowance < amount {
+        if allowance < total_amount {
             return Err(TxError::InsufficientAllowance);
         }
 
-        if self.balance(&allower) < amount || self.balance(&caller) < fee {
+        if self.balance(&allower) < total_amount {
             return Err(TxError::InsufficientBalance);
         }
 
-        self.approve(allower, caller, allowance - amount, 0);
-        self.withdraw_erc20(&caller, 0, fee);
+        self.approve(allower, caller, allowance - total_amount, 0);
+        self.withdraw_erc20(&allower, 0, fee);
         self.transfer(allower, spender, amount, 0)?;
 
         Ok(())
@@ -492,21 +494,21 @@ mod tests {
 
         // inserting non-zero into empty ledger and read back the allowance
         ledger = Ledger::default();
-        ledger.approve(&alice(), &bob(), 1000, 0);
+        assert_eq!(ledger.approve(&alice(), &bob(), 1000, 0), Ok(()));
         assert_eq!(ledger.allowances.get(&(alice(), bob())).unwrap(), &1000);
         assert_eq!(ledger.allowance(&alice(), &bob()), 1000);
 
         // overriding allowance with non-zero and read back the allowance
         ledger = Ledger::default();
-        ledger.approve(&alice(), &bob(), 1000, 0);
-        ledger.approve(&alice(), &bob(), 2000, 0);
+        assert_eq!(ledger.approve(&alice(), &bob(), 1000, 0), Ok(()));
+        assert_eq!(ledger.approve(&alice(), &bob(), 2000, 0), Ok(()));
         assert_eq!(ledger.allowances.get(&(alice(), bob())).unwrap(), &2000);
         assert_eq!(ledger.allowance(&alice(), &bob()), 2000);
 
         // overriding allowance with zero and read back the allowance
         ledger = Ledger::default();
-        ledger.approve(&alice(), &bob(), 1000, 0);
-        ledger.approve(&alice(), &bob(), 0, 0);
+        assert_eq!(ledger.approve(&alice(), &bob(), 1000, 0), Ok(()));
+        assert_eq!(ledger.approve(&alice(), &bob(), 0, 0), Ok(()));
         // allowance removed from the ledger
         assert!(ledger.allowances.get(&(alice(), bob())).is_none());
         assert!(ledger.allowances.is_empty());
@@ -515,12 +517,12 @@ mod tests {
 
         // alice approve more than one person
         ledger = Ledger::default();
-        ledger.approve(&alice(), &bob(), 1000, 0);
-        ledger.approve(&alice(), &charlie(), 2000, 0);
+        assert_eq!(ledger.approve(&alice(), &bob(), 1000, 0), Ok(()));
+        assert_eq!(ledger.approve(&alice(), &charlie(), 2000, 0), Ok(()));
         assert_eq!(ledger.allowance(&alice(), &bob()), 1000);
         assert_eq!(ledger.allowance(&alice(), &charlie()), 2000);
         // remove bob's allowance, charlie still has his
-        ledger.approve(&alice(), &bob(), 0, 0);
+        assert_eq!(ledger.approve(&alice(), &bob(), 0, 0), Ok(()));
         assert_eq!(ledger.allowance(&alice(), &bob()), 0);
         assert_eq!(ledger.allowance(&alice(), &charlie()), 2000);
         //bob is removed from the allowances map
@@ -528,13 +530,13 @@ mod tests {
     }
 
     #[test]
-    fn approve_and_transfer() {
+    fn approve_and_transfer_no_fees() {
         MockContext::new().inject();
 
         // alice has less balance than she approved bob to retrieve
         let mut ledger = Ledger::default();
         ledger.deposit(&alice(), 500);
-        ledger.approve(&alice(), &bob(), 1000, 0);
+        assert_eq!(ledger.approve(&alice(), &bob(), 1000, 0), Ok(()));
         assert_eq!(ledger.balance(&alice()), 500);
         assert_eq!(ledger.balance(&bob()), 0);
         // charlie tries to initiate the transfer from alice to bob
@@ -544,7 +546,10 @@ mod tests {
                 .unwrap_err(),
             TxError::InsufficientAllowance
         );
-        ledger.transfer_from(&bob(), &alice(), &charlie(), 400, 0);
+        assert_eq!(
+            ledger.transfer_from(&bob(), &alice(), &charlie(), 400, 0),
+            Ok(())
+        );
         // alowances changed
         assert_eq!(ledger.allowance(&alice(), &bob()), 600);
         // balances changed
@@ -562,10 +567,11 @@ mod tests {
         // alice has more balance then, she approved bob to retrieve
         let mut ledger = Ledger::default();
         ledger.deposit(&alice(), 1000);
-        ledger.approve(&alice(), &bob(), 500, 0);
+        assert_eq!(ledger.approve(&alice(), &bob(), 500, 0), Ok(()));
         assert_eq!(ledger.balance(&alice()), 1000);
         assert_eq!(ledger.balance(&bob()), 0);
         assert_eq!(ledger.balance(&charlie()), 0);
+        // bob tries to retrieve more than his allowance
         assert_eq!(
             ledger
                 .transfer_from(&bob(), &alice(), &charlie(), 600, 0)
@@ -578,6 +584,30 @@ mod tests {
         assert_eq!(ledger.balance(&alice()), 1000);
         assert_eq!(ledger.balance(&bob()), 0);
         assert_eq!(ledger.balance(&charlie()), 0);
+    }
+
+    #[test]
+    fn approve_and_transfer_with_fees() {
+        MockContext::new().inject();
+
+        let mut ledger = Ledger::default();
+        ledger.deposit(&alice(), 500);
+        assert_eq!(ledger.approve(&alice(), &bob(), 1000, 10), Ok(()));
+        assert_eq!(ledger.balance(&alice()), 490);
+        assert_eq!(ledger.balance(&bob()), 0);
+        // the actual approved amount contains the fees
+        assert_eq!(ledger.allowance(&alice(), &bob()), 1010);
+        assert_eq!(
+            ledger.transfer_from(&bob(), &alice(), &bob(), 400, 10),
+            Ok(())
+        );
+
+        // bob received the right amount
+        assert_eq!(ledger.balance(&bob()), 400);
+        // alice balance decreased with the value and with the fee
+        ledger.deposit(&alice(), 90);
+        // the allowance decreased with the value and with the fee
+        assert_eq!(ledger.allowance(&alice(), &bob()), 600);
     }
 
     #[test]
