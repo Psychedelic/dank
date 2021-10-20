@@ -6,12 +6,12 @@ use ic_kit::candid::CandidType;
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context, Principal};
 use serde::Deserialize;
-use xtc_history::data::{HistoryArchive, HistoryArchiveBorrowed};
+use xtc_history::data::{HistoryArchive, HistoryArchiveBorrowed, HistoryArchiveV0};
 
 #[derive(CandidType, Deserialize)]
 struct StableStorageV0 {
     ledger: Vec<(Principal, u64)>,
-    history: HistoryArchive,
+    history: HistoryArchiveV0,
     controller: Principal,
     stats: StatsDataV0,
 }
@@ -64,7 +64,7 @@ pub fn post_upgrade() {
         .stable_restore::<(StableStorageV0,)>()
         .expect("Failed to read from stable storage.");
     ic.get_mut::<Ledger>().load(stable.ledger);
-    ic.get_mut::<HistoryBuffer>().load(stable.history);
+    ic.get_mut::<HistoryBuffer>().load(stable.history.into());
     management::Controller::load(stable.controller);
     StatsData::load(stable.stats.into());
 }

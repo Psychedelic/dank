@@ -38,6 +38,7 @@ async fn insert(count: u32, progress: bool) {
             kind: TransactionKind::Mint {
                 to: Principal::anonymous(),
             },
+            status: TransactionStatus::SUCCEEDED,
         };
 
         data.history.push(event);

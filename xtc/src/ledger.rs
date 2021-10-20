@@ -1,6 +1,8 @@
 use crate::common_types::{Operation, TxError, TxReceipt, TxRecord};
 use crate::fee::compute_fee;
-use crate::history::{HistoryBuffer, Transaction, TransactionId, TransactionKind};
+use crate::history::{
+    HistoryBuffer, Transaction, TransactionId, TransactionKind, TransactionStatus,
+};
 use crate::management::IsShutDown;
 use crate::meta::meta;
 use crate::stats::StatsData;
@@ -238,6 +240,7 @@ pub async fn approve(to: Principal, amount: Nat) -> TxReceipt {
             from: caller,
             to: to,
         },
+        status: TransactionStatus::SUCCEEDED,
     };
 
     Ok(Nat::from(
@@ -267,6 +270,7 @@ pub async fn transfer_erc20(to: Principal, amount: Nat) -> TxReceipt {
             from: caller,
             to: to,
         },
+        status: TransactionStatus::SUCCEEDED,
     };
 
     Ok(Nat::from(
@@ -297,6 +301,7 @@ pub async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> TxRec
             from: from,
             to: to,
         },
+        status: TransactionStatus::SUCCEEDED,
     };
 
     Ok(Nat::from(
@@ -330,6 +335,7 @@ pub async fn transfer(args: TransferArguments) -> Result<TransactionId, Transfer
             from: caller,
             to: args.to,
         },
+        status: TransactionStatus::SUCCEEDED,
     };
 
     let id = ic.get_mut::<HistoryBuffer>().push(transaction);
@@ -369,6 +375,7 @@ pub async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError
         cycles,
         fee,
         kind: TransactionKind::Mint { to: account },
+        status: TransactionStatus::SUCCEEDED,
     };
 
     let id = ic.get_mut::<HistoryBuffer>().push(transaction);
@@ -410,7 +417,7 @@ pub async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
         canister_id: args.canister_id,
     };
 
-    let (result, refunded) = match ic
+    match ic
         .call_with_payment(
             Principal::management_canister(),
             "deposit_cycles",
@@ -424,7 +431,12 @@ pub async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
             let cycles = args.amount - refunded;
             let actual_fee = compute_fee(cycles);
             let refunded = refunded + (deduced_fee - actual_fee);
-            let transaction = Transaction {
+
+            if refunded > 0 {
+                ledger.deposit(&caller, refunded);
+            }
+
+            let id = ic.get_mut::<HistoryBuffer>().push(Transaction {
                 timestamp: ic.time(),
                 cycles,
                 fee: actual_fee,
@@ -432,19 +444,27 @@ pub async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
                     from: caller.clone(),
                     to: args.canister_id,
                 },
-            };
+                status: TransactionStatus::SUCCEEDED,
+            });
 
-            let id = ic.get_mut::<HistoryBuffer>().push(transaction);
-
-            (Ok(id), refunded)
+            Ok(id)
         }
-        Err(_) => (Err(BurnError::InvalidTokenContract), args.amount),
-    };
-    if refunded > 0 {
-        ledger.deposit(&caller, refunded);
-    }
+        Err(_) => {
+            ledger.deposit(&caller, args.amount);
 
-    result
+            ic.get_mut::<HistoryBuffer>().push(Transaction {
+                timestamp: ic.time(),
+                cycles: 0,
+                fee: args.amount,
+                kind: TransactionKind::Burn {
+                    from: caller.clone(),
+                    to: args.canister_id,
+                },
+                status: TransactionStatus::FAILED,
+            });
+            Err(BurnError::InvalidTokenContract)
+        }
+    }
 }
 
 #[cfg(test)]

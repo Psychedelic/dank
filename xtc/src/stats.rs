@@ -12,6 +12,8 @@ pub struct StatsDataV0 {
     balance: u64,
     // Usage statistics
     transfers_count: u64,
+    transfers_from_count: u64,
+    approvals_count: u64,
     mints_count: u64,
     burns_count: u64,
     proxy_calls_count: u64,

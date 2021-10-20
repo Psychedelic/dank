@@ -2,7 +2,7 @@
 //! by the dfx command line.
 
 use crate::fee::compute_fee;
-use crate::history::{HistoryBuffer, Transaction, TransactionKind};
+use crate::history::{HistoryBuffer, Transaction, TransactionKind, TransactionStatus};
 use crate::ledger::Ledger;
 use crate::management::IsShutDown;
 use crate::meta::meta;
@@ -64,7 +64,12 @@ pub async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
             let cycles = args.cycles - refunded;
             let actual_fee = compute_fee(cycles);
             let refunded = refunded + (deduced_fee - actual_fee);
-            let transaction = Transaction {
+
+            if refunded > 0 {
+                ledger.deposit(&caller, refunded);
+            }
+
+            ic.get_mut::<HistoryBuffer>().push(Transaction {
                 timestamp: ic.time(),
                 cycles,
                 fee: actual_fee,
@@ -73,18 +78,26 @@ pub async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
                     canister: args.canister.clone(),
                     method_name: args.method_name,
                 },
-            };
-
-            ic.get_mut::<HistoryBuffer>().push(transaction);
-
-            if refunded > 0 {
-                ledger.deposit(&caller, refunded);
-            }
+                status: TransactionStatus::SUCCEEDED,
+            });
 
             Ok(CallResult { r#return: x })
         }
         Err((code, msg)) => {
             ledger.deposit(&caller, args.cycles);
+
+            ic.get_mut::<HistoryBuffer>().push(Transaction {
+                timestamp: ic.time(),
+                cycles: 0,
+                fee: deduced_fee,
+                kind: TransactionKind::CanisterCalled {
+                    from: caller.clone(),
+                    canister: args.canister.clone(),
+                    method_name: args.method_name,
+                },
+                status: TransactionStatus::FAILED,
+            });
+
             Err(format!(
                 "An error happened during the call: {}: {}",
                 code as u8, msg
@@ -123,7 +136,7 @@ pub async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId,
         }),
     };
 
-    let create_result = match CreateCanister::perform_with_payment(
+    match CreateCanister::perform_with_payment(
         Principal::management_canister(),
         (in_args,),
         args.cycles,
@@ -135,7 +148,12 @@ pub async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId,
             let cycles = args.cycles - refunded;
             let actual_fee = compute_fee(cycles);
             let refunded = refunded + (deduced_fee - actual_fee);
-            let transaction = Transaction {
+
+            if refunded > 0 {
+                ledger.deposit(&caller, refunded);
+            }
+
+            ic.get_mut::<HistoryBuffer>().push(Transaction {
                 timestamp: ic.time(),
                 cycles,
                 fee: actual_fee,
@@ -143,26 +161,31 @@ pub async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId,
                     from: caller.clone(),
                     canister: r.canister_id,
                 },
-            };
+                status: TransactionStatus::SUCCEEDED,
+            });
 
-            ic.get_mut::<HistoryBuffer>().push(transaction);
-
-            if refunded > 0 {
-                ledger.deposit(&caller, refunded);
-            }
-
-            r
+            Ok(r)
         }
         Err((code, msg)) => {
             ledger.deposit(&caller, args.cycles);
-            return Err(format!(
+
+            ic.get_mut::<HistoryBuffer>().push(Transaction {
+                timestamp: ic.time(),
+                cycles: 0,
+                fee: deduced_fee,
+                kind: TransactionKind::CanisterCreated {
+                    from: caller.clone(),
+                    canister: caller.clone(),
+                },
+                status: TransactionStatus::FAILED,
+            });
+
+            Err(format!(
                 "An error happened during the call: {}: {}",
                 code as u8, msg
-            ));
+            ))
         }
-    };
-
-    Ok(create_result)
+    }
 }
 
 #[derive(CandidType)]
@@ -202,7 +225,7 @@ pub async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
         canister_id: Principal,
     }
 
-    let (result, refunded) = match ic
+    match ic
         .call_with_payment(
             args.canister.clone(),
             "wallet_receive",
@@ -216,7 +239,12 @@ pub async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
             let cycles = args.amount - refunded;
             let actual_fee = compute_fee(cycles);
             let refunded = refunded + (deduced_fee - actual_fee);
-            let transaction = Transaction {
+
+            if refunded > 0 {
+                ledger.deposit(&caller, refunded);
+            }
+
+            ic.get_mut::<HistoryBuffer>().push(Transaction {
                 timestamp: ic.time(),
                 cycles,
                 fee: actual_fee,
@@ -224,20 +252,28 @@ pub async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
                     from: caller.clone(),
                     to: args.canister,
                 },
-            };
+                status: TransactionStatus::SUCCEEDED,
+            });
 
-            ic.get_mut::<HistoryBuffer>().push(transaction);
-
-            (Ok(()), refunded)
+            Ok(())
         }
-        Err(_) => (Err("Call failed.".into()), args.amount),
-    };
+        Err(_) => {
+            ledger.deposit(&caller, args.amount);
 
-    if refunded > 0 {
-        ledger.deposit(&caller, refunded);
+            ic.get_mut::<HistoryBuffer>().push(Transaction {
+                timestamp: ic.time(),
+                cycles: 0,
+                fee: deduced_fee,
+                kind: TransactionKind::Burn {
+                    from: caller.clone(),
+                    to: args.canister,
+                },
+                status: TransactionStatus::FAILED,
+            });
+
+            Err("Call failed.".into())
+        }
     }
-
-    result
 }
 
 #[update]
