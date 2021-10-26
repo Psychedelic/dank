@@ -36,11 +36,38 @@ pub enum TransactionKind {
 }
 
 #[derive(CandidType, Clone, Deserialize, PartialOrd, PartialEq, Debug)]
+pub struct TransactionV0 {
+    pub timestamp: u64,
+    pub cycles: u64,
+    pub fee: u64,
+    pub kind: TransactionKind,
+}
+
+impl From<&TransactionV0> for Transaction {
+    fn from(transaction_v0: &TransactionV0) -> Transaction {
+        Transaction {
+            timestamp: transaction_v0.timestamp,
+            cycles: transaction_v0.cycles,
+            fee: transaction_v0.fee,
+            kind: transaction_v0.kind.clone(),
+            status: TransactionStatus::SUCCEEDED,
+        }
+    }
+}
+
+#[derive(CandidType, Clone, Deserialize, PartialOrd, PartialEq, Debug)]
+pub enum TransactionStatus {
+    SUCCEEDED,
+    FAILED,
+}
+
+#[derive(CandidType, Clone, Deserialize, PartialOrd, PartialEq, Debug)]
 pub struct Transaction {
     pub timestamp: u64,
     pub cycles: u64,
     pub fee: u64,
     pub kind: TransactionKind,
+    pub status: TransactionStatus,
 }
 
 #[derive(Deserialize, CandidType)]

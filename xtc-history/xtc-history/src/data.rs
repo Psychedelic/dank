@@ -1,6 +1,7 @@
 use crate::backend::Backend;
 use ic_cdk::export::candid::{CandidType, Principal};
 use serde::Deserialize;
+use std::convert::From;
 use xtc_history_common::bucket::*;
 use xtc_history_common::types::*;
 
@@ -27,6 +28,29 @@ pub struct HistoryArchive<Address = Principal> {
     pub offset: TransactionId,
     pub events: Vec<Transaction>,
     pub buckets: Vec<(TransactionId, Address)>,
+}
+
+#[derive(CandidType, Deserialize)]
+pub struct HistoryArchiveV0<Address = Principal> {
+    pub offset: TransactionId,
+    pub events: Vec<TransactionV0>,
+    pub buckets: Vec<(TransactionId, Address)>,
+}
+
+// TODO: ticking time bomb, we need to integrate the history service, as we
+// are only converting the transactions in the current bucket
+impl From<HistoryArchiveV0> for HistoryArchive {
+    fn from(history_archive_v0: HistoryArchiveV0) -> HistoryArchive {
+        HistoryArchive {
+            offset: history_archive_v0.offset,
+            events: history_archive_v0
+                .events
+                .iter()
+                .map(|transaction| transaction.into())
+                .collect(),
+            buckets: history_archive_v0.buckets,
+        }
+    }
 }
 
 impl<T> Default for HistoryData<T> {
@@ -234,6 +258,7 @@ mod test {
             kind: TransactionKind::Mint {
                 to: Principal::management_canister(),
             },
+            status: TransactionStatus::SUCCEEDED,
         }
     }
 

@@ -77,7 +77,7 @@ async fn test_with_call_fee<T: CandidType + Clone, O, E: Debug>(
 
     assert_eq!(
         ctx.get::<Ledger>().balance(&mock_principals::alice()),
-        10_000_000_000_000
+        10_000_000_000_000 - compute_fee(10_000)
     );
 }
 

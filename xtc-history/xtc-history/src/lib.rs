@@ -139,6 +139,7 @@ mod tests {
             kind: TransactionKind::Mint {
                 to: Principal::management_canister(),
             },
+            status: TransactionStatus::SUCCEEDED,
         }
     }
 

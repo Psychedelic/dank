@@ -49,6 +49,7 @@ pub struct TxRecord {
     pub op: Operation,
     pub timestamp: Time,
     pub index: Nat,
+    pub status: TransactionStatus,
 }
 
 impl TxRecord {
@@ -71,6 +72,7 @@ impl TryFrom<Transaction> for TxRecord {
                 Operation::approve,
                 Int::from(transaction.timestamp),
                 Nat::from(0),
+                transaction.status,
             ),
             TransactionKind::Transfer { from, to } => TxRecord::new(
                 None,
@@ -81,6 +83,7 @@ impl TryFrom<Transaction> for TxRecord {
                 Operation::transfer,
                 Int::from(transaction.timestamp),
                 Nat::from(0),
+                transaction.status,
             ),
             TransactionKind::TransferFrom { caller, from, to } => TxRecord::new(
                 Some(caller),
@@ -91,6 +94,7 @@ impl TryFrom<Transaction> for TxRecord {
                 Operation::transferFrom,
                 Int::from(transaction.timestamp),
                 Nat::from(0),
+                transaction.status,
             ),
             TransactionKind::Mint { to } => TxRecord::new(
                 None,
@@ -101,6 +105,7 @@ impl TryFrom<Transaction> for TxRecord {
                 Operation::mint,
                 Int::from(transaction.timestamp),
                 Nat::from(0),
+                transaction.status,
             ),
             TransactionKind::Burn { from, to } => TxRecord::new(
                 None,
@@ -111,6 +116,7 @@ impl TryFrom<Transaction> for TxRecord {
                 Operation::burn,
                 Int::from(transaction.timestamp),
                 Nat::from(0),
+                transaction.status,
             ),
             TransactionKind::CanisterCalled {
                 from,
@@ -125,6 +131,7 @@ impl TryFrom<Transaction> for TxRecord {
                 Operation::canisterCalled,
                 Int::from(transaction.timestamp),
                 Nat::from(0),
+                transaction.status,
             ),
             TransactionKind::CanisterCreated { from, canister } => TxRecord::new(
                 None,
@@ -135,6 +142,7 @@ impl TryFrom<Transaction> for TxRecord {
                 Operation::canisterCreated,
                 Int::from(transaction.timestamp),
                 Nat::from(0),
+                transaction.status,
             ),
         })
     }

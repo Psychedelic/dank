@@ -34,6 +34,7 @@ type TxRecord =
    op: Operation;
    timestamp: Time;
    index: nat;
+   status: TransactionStatus;
  };
 
 type TxReceipt =
@@ -96,7 +97,6 @@ type EventDetail = variant {
         from : principal;
         to   : principal;
     };
-    // DEX events
     Mint     : record {
         to   : principal;
     };
@@ -124,11 +124,17 @@ type EventDetail = variant {
     };
 };
 
+type TransactionStatus = variant {
+    SUCCEEDED;
+    FAILED;
+};
+
 type Event = record {
     fee       : nat64;
     kind      : EventDetail;
     cycles    : nat64;
     timestamp : nat64;
+    status : TransactionStatus;
 };
 
 type EventsConnection = record {
