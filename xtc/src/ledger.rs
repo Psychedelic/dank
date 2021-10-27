@@ -455,7 +455,7 @@ pub async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
             ic.get_mut::<HistoryBuffer>().push(Transaction {
                 timestamp: ic.time(),
                 cycles: 0,
-                fee: args.amount,
+                fee: deduced_fee,
                 kind: TransactionKind::Burn {
                     from: caller.clone(),
                     to: args.canister_id,
