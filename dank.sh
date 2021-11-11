@@ -131,11 +131,11 @@ balanceOf(){
 mint(){
 	pem="${nameToPem[$1]}"
 	amount="${2:-10_000_000_000_000}"
-	icx --pem=$pem update $piggyID perform_mint "(record { canister= principal \"$xtcID\"; account=null; cycles=10_000_000_000_000 })" $icxProloguePiggy
+	icx --pem=$pem update $piggyID perform_mint "(record { canister= principal \"$xtcID\"; account=null; cycles=20_000_000_000 })" $icxProloguePiggy
 }
 
 topup(){
-    dfx canister deposit-cycles 10000000000000 ryjl3-tyaaa-aaaaa-aaaba-cai
+    dfx canister deposit-cycles 10000000000000 $piggyID
 }
 
 setup(){

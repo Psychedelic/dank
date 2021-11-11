@@ -2,7 +2,7 @@
 members = [
     "xtc",
     "piggy-bank",
-#    History
+    #    History
     "xtc-history/xtc-history",
     "xtc-history/xtc-history-bucket",
     "xtc-history/xtc-history-common",

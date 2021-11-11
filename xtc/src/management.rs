@@ -1,5 +1,7 @@
+use cap_sdk::handshake;
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context, Principal};
+use std::str::FromStr;
 
 // --- init
 
@@ -37,6 +39,11 @@ impl Controller {
 fn init() {
     let ic = get_context();
     Controller::load_if_not_present(ic.caller());
+    // CAP TODO: for local testing
+    handshake(
+        0,
+        Some(Principal::from_str("rrkah-fqaaa-aaaaa-aaaaq-cai").unwrap()),
+    );
 }
 
 // --- halt
@@ -73,19 +80,4 @@ fn halt() {
     }
 
     ic.get_mut::<IsShutDown>().0 = true;
-}
-
-#[update]
-async fn finish_pending_tasks(limit: u32) {
-    let ic = get_context();
-
-    if ic.caller() != Controller::get_principal() {
-        panic!("Only the controller can call this method.");
-    }
-
-    for _ in 0..limit {
-        if !crate::progress().await {
-            return;
-        }
-    }
 }

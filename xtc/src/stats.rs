@@ -1,4 +1,3 @@
-use crate::history::HistoryBuffer;
 use ic_kit::candid::{CandidType, Nat};
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context};
@@ -28,8 +27,8 @@ impl From<StatsDataV0> for StatsData {
             history_events: s.history_events,
             balance: s.balance,
             transfers_count: s.transfers_count,
-            transfers_from_count: 0,
-            approvals_count: 0,
+            transfers_from_count: s.transfers_from_count,
+            approvals_count: s.approvals_count,
             mints_count: s.mints_count,
             burns_count: s.burns_count,
             proxy_calls_count: s.proxy_calls_count,

@@ -1,12 +1,16 @@
 //! Contains source codes related to making Dank compatible with cycles wallet so it can be used
 //! by the dfx command line.
 
+use crate::common_types::{Operation, TxRecord, TxRecordExt};
 use crate::fee::compute_fee;
-use crate::history::{HistoryBuffer, Transaction, TransactionKind, TransactionStatus};
+use crate::insert_legacy_into_cap;
 use crate::ledger::Ledger;
 use crate::management::IsShutDown;
 use crate::meta::meta;
+use xtc_history_common::types::*;
+//use crate::types::{Transaction, TransactionKind, TransactionStatus};
 use ic_kit::candid::CandidType;
+use ic_kit::candid::{Int, Nat};
 use ic_kit::interfaces::management::{
     CanisterSettings, CreateCanister, CreateCanisterArgument, WithCanisterId,
 };
@@ -69,34 +73,44 @@ pub async fn call(args: CallCanisterArgs) -> Result<CallResult, String> {
                 ledger.deposit(&caller, refunded);
             }
 
-            ic.get_mut::<HistoryBuffer>().push(Transaction {
-                timestamp: ic.time(),
-                cycles,
-                fee: actual_fee,
-                kind: TransactionKind::CanisterCalled {
+            insert_legacy_into_cap::<String>(
+                TxRecordExt {
+                    caller: None,
                     from: caller.clone(),
-                    canister: args.canister.clone(),
-                    method_name: args.method_name,
+                    to: args.canister.clone(),
+                    amount: Nat::from(cycles),
+                    fee: Nat::from(actual_fee),
+                    op: Operation::canisterCalled,
+                    timestamp: Int::from(ic_kit::ic::time()),
+                    index: Nat::from(0),
+                    status: TransactionStatus::SUCCEEDED,
+                    method_name: method_name.clone(),
                 },
-                status: TransactionStatus::SUCCEEDED,
-            });
+                "unable to insert transaction into CAP".to_string(),
+            )
+            .await;
 
             Ok(CallResult { r#return: x })
         }
         Err((code, msg)) => {
             ledger.deposit(&caller, args.cycles);
 
-            ic.get_mut::<HistoryBuffer>().push(Transaction {
-                timestamp: ic.time(),
-                cycles: 0,
-                fee: deduced_fee,
-                kind: TransactionKind::CanisterCalled {
+            insert_legacy_into_cap::<String>(
+                TxRecordExt {
+                    caller: None,
                     from: caller.clone(),
-                    canister: args.canister.clone(),
-                    method_name: args.method_name,
+                    to: args.canister.clone(),
+                    amount: Nat::from(0),
+                    fee: Nat::from(deduced_fee),
+                    op: Operation::canisterCalled,
+                    timestamp: Int::from(ic_kit::ic::time()),
+                    index: Nat::from(0),
+                    status: TransactionStatus::FAILED,
+                    method_name: method_name.clone(),
                 },
-                status: TransactionStatus::FAILED,
-            });
+                "unable to insert transaction into CAP".to_string(),
+            )
+            .await;
 
             Err(format!(
                 "An error happened during the call: {}: {}",
@@ -153,32 +167,44 @@ pub async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId,
                 ledger.deposit(&caller, refunded);
             }
 
-            ic.get_mut::<HistoryBuffer>().push(Transaction {
-                timestamp: ic.time(),
-                cycles,
-                fee: actual_fee,
-                kind: TransactionKind::CanisterCreated {
+            insert_legacy_into_cap::<String>(
+                TxRecordExt {
+                    caller: None,
                     from: caller.clone(),
-                    canister: r.canister_id,
+                    to: r.canister_id.clone(),
+                    amount: Nat::from(cycles),
+                    fee: Nat::from(actual_fee),
+                    op: Operation::canisterCreated,
+                    timestamp: Int::from(ic_kit::ic::time()),
+                    index: Nat::from(0),
+                    status: TransactionStatus::SUCCEEDED,
+                    method_name: "".to_string(),
                 },
-                status: TransactionStatus::SUCCEEDED,
-            });
+                "unable to insert transaction into CAP".to_string(),
+            )
+            .await;
 
             Ok(r)
         }
         Err((code, msg)) => {
             ledger.deposit(&caller, args.cycles);
 
-            ic.get_mut::<HistoryBuffer>().push(Transaction {
-                timestamp: ic.time(),
-                cycles: 0,
-                fee: deduced_fee,
-                kind: TransactionKind::CanisterCreated {
+            insert_legacy_into_cap::<String>(
+                TxRecordExt {
+                    caller: None,
                     from: caller.clone(),
-                    canister: caller.clone(),
+                    to: caller.clone(),
+                    amount: Nat::from(0),
+                    fee: Nat::from(deduced_fee),
+                    op: Operation::canisterCreated,
+                    timestamp: Int::from(ic_kit::ic::time()),
+                    index: Nat::from(0),
+                    status: TransactionStatus::FAILED,
+                    method_name: "".to_string(),
                 },
-                status: TransactionStatus::FAILED,
-            });
+                "unable to insert transaction into CAP".to_string(),
+            )
+            .await;
 
             Err(format!(
                 "An error happened during the call: {}: {}",
@@ -244,32 +270,44 @@ pub async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
                 ledger.deposit(&caller, refunded);
             }
 
-            ic.get_mut::<HistoryBuffer>().push(Transaction {
-                timestamp: ic.time(),
-                cycles,
-                fee: actual_fee,
-                kind: TransactionKind::Burn {
+            insert_legacy_into_cap::<String>(
+                TxRecordExt {
+                    caller: None,
                     from: caller.clone(),
                     to: args.canister,
+                    amount: Nat::from(cycles),
+                    fee: Nat::from(actual_fee),
+                    op: Operation::burn,
+                    timestamp: Int::from(ic_kit::ic::time()),
+                    index: Nat::from(0),
+                    status: TransactionStatus::SUCCEEDED,
+                    method_name: "".to_string(),
                 },
-                status: TransactionStatus::SUCCEEDED,
-            });
+                "unable to insert transaction into CAP".to_string(),
+            )
+            .await;
 
             Ok(())
         }
         Err(_) => {
             ledger.deposit(&caller, args.amount);
 
-            ic.get_mut::<HistoryBuffer>().push(Transaction {
-                timestamp: ic.time(),
-                cycles: 0,
-                fee: deduced_fee,
-                kind: TransactionKind::Burn {
+            insert_legacy_into_cap::<String>(
+                TxRecordExt {
+                    caller: None,
                     from: caller.clone(),
                     to: args.canister,
+                    amount: Nat::from(0),
+                    fee: Nat::from(deduced_fee),
+                    op: Operation::burn,
+                    timestamp: Int::from(ic_kit::ic::time()),
+                    index: Nat::from(0),
+                    status: TransactionStatus::FAILED,
+                    method_name: "".to_string(),
                 },
-                status: TransactionStatus::FAILED,
-            });
+                "unable to insert transaction into CAP".to_string(),
+            )
+            .await;
 
             Err("Call failed.".into())
         }
@@ -279,7 +317,6 @@ pub async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
 #[update]
 pub async fn wallet_create_wallet(_: CreateCanisterArgs) -> Result<WithCanisterId, String> {
     let ic = get_context();
-    crate::progress().await;
     Ok(WithCanisterId {
         canister_id: ic.id(),
     })

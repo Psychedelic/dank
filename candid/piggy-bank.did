@@ -2,6 +2,7 @@ type TransactionId = nat64;
 
 type MintError = variant {
     NotSufficientLiquidity;
+    CapInsertion;
 };
 
 type MintResult = variant {

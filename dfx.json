@@ -1,35 +1,35 @@
 {
-  "version": 1,
-  "dfx": "0.8.1",
-  "canisters": {
-    "xtc": {
-      "build": "node build.js",
-      "candid": "candid/xtc.did",
-      "wasm": "target/wasm32-unknown-unknown/release/xtc-rel-opt.wasm",
-      "type": "custom"
+    "version": 1,
+    "dfx": "0.8.3",
+    "canisters": {
+      "xtc": {
+        "build": "node build.js",
+        "candid": "candid/xtc.did",
+        "wasm": "target/wasm32-unknown-unknown/release/xtc-rel-opt.wasm",
+        "type": "custom"
+      },
+      "piggy-bank": {
+        "build": "cargo build --target wasm32-unknown-unknown --release --package piggy-bank",
+        "candid": "candid/piggy-bank.did",
+        "wasm": "target/wasm32-unknown-unknown/release/piggy_bank.wasm",
+        "type": "custom"
+      },
+      "history-e2e": {
+        "build": "cargo build --target wasm32-unknown-unknown --release --package xtc-history-e2e",
+        "candid": "candid/xtc-history-e2e.did",
+        "wasm": "target/wasm32-unknown-unknown/release/xtc_history_e2e-rel-opt.wasm",
+        "type": "custom"
+      }
     },
-    "piggy-bank": {
-      "build": "cargo build --target wasm32-unknown-unknown --release --package piggy-bank",
-      "candid": "candid/piggy-bank.did",
-      "wasm": "target/wasm32-unknown-unknown/release/piggy_bank.wasm",
-      "type": "custom"
+    "defaults": {
+      "build": {
+        "packtool": ""
+      }
     },
-    "history-e2e": {
-      "build": "cargo build --target wasm32-unknown-unknown --release --package xtc-history-e2e",
-      "candid": "candid/xtc-history-e2e.did",
-      "wasm": "target/wasm32-unknown-unknown/release/xtc_history_e2e-rel-opt.wasm",
-      "type": "custom"
-    }
-  },
-  "defaults": {
-    "build": {
-      "packtool": ""
-    }
-  },
-  "networks": {
-    "local": {
-      "bind": "127.0.0.1:8000",
-      "type": "ephemeral"
+    "networks": {
+      "local": {
+        "bind": "127.0.0.1:8000",
+        "type": "ephemeral"
+      }
     }
   }
-}

@@ -13,6 +13,10 @@ ic-cdk = "0.3.1"
 serde = { version="1.0.130", features = ["derive"] }
 derive_builder = "0.10.2"
 derive-new = "0.5"
+cap-sdk = { git = "https://github.com/Psychedelic/cap.git", branch = "cap-sdk" }
+cap-sdk-core = { git = "https://github.com/Psychedelic/cap.git", branch = "cap-sdk"}
+cap-std = { git = "https://github.com/Psychedelic/cap", branch = "cap-sdk", package="cap-standards", features = ["alpha-dip20", "cap-sdk"] }
+num-bigint = "0.4.3"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 async-std = { version="1.10.0", features = ["attributes"] }

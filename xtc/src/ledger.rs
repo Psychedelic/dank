@@ -1,18 +1,23 @@
-use crate::common_types::{Operation, TxError, TxReceipt, TxRecord};
-use crate::fee::compute_fee;
-use crate::history::{
-    HistoryBuffer, Transaction, TransactionId, TransactionKind, TransactionStatus,
+use crate::common_types::{
+    event_into_indefinite_event, Operation, TxError, TxReceipt, TxRecordExt,
 };
+use crate::fee::compute_fee;
 use crate::management::IsShutDown;
 use crate::meta::meta;
 use crate::stats::StatsData;
+//use crate::types::{Transaction, TransactionId, TransactionKind, TransactionStatus};
 use crate::utils;
+use crate::{insert_into_cap, insert_legacy_into_cap};
+use cap_sdk::insert;
+use cap_sdk::{Event, IndefiniteEvent};
+use cap_std::dip20::TxRecord;
 use ic_kit::candid::{CandidType, Int, Nat};
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context, Principal};
 use serde::*;
 use std::collections::HashMap;
 use std::convert::TryInto;
+use xtc_history_common::types::*;
 
 #[derive(Default)]
 pub struct Ledger {
@@ -204,12 +209,13 @@ pub struct TransferArguments {
     pub amount: u64,
 }
 
-#[derive(CandidType, Debug)]
+#[derive(CandidType, Clone, Debug)]
 pub enum TransferError {
     InsufficientBalance,
     AmountTooLarge,
     CallFailed,
     Unknown,
+    CapInsertion,
 }
 
 #[query]
@@ -223,29 +229,26 @@ pub async fn approve(to: Principal, amount: Nat) -> TxReceipt {
     use ic_cdk::export::candid;
     let caller = ic_kit::ic::caller();
 
-    crate::progress().await;
-
     let ledger = ic_kit::ic::get_mut::<Ledger>();
     let amount_u64: u64 =
-        utils::convert_nat_to_u64(amount).expect("Amount cannot be represented as u64");
+        utils::convert_nat_to_u64(amount.clone()).expect("Amount cannot be represented as u64");
     let fee = compute_fee(amount_u64);
 
     ledger.approve(&caller, &to, amount_u64, fee)?;
 
-    let transaction = Transaction {
-        timestamp: ic_kit::ic::time(),
-        cycles: amount_u64,
-        fee,
-        kind: TransactionKind::Approve {
-            from: caller,
-            to: to,
-        },
+    insert_into_cap(TxRecordExt {
+        caller: None,
+        from: caller,
+        to: to,
+        amount: amount,
+        fee: Nat::from(fee),
+        op: Operation::approve,
+        timestamp: Int::from(ic_kit::ic::time()),
+        index: Nat::from(0),
         status: TransactionStatus::SUCCEEDED,
-    };
-
-    Ok(Nat::from(
-        ic_kit::ic::get_mut::<HistoryBuffer>().push(transaction.clone()),
-    ))
+        method_name: "".to_string(),
+    })
+    .await
 }
 
 #[update(name=transferErc20)]
@@ -254,28 +257,25 @@ pub async fn transfer_erc20(to: Principal, amount: Nat) -> TxReceipt {
 
     let caller = ic_kit::ic::caller();
 
-    crate::progress().await;
-
     let ledger = ic_kit::ic::get_mut::<Ledger>();
-    let amount_u64: u64 =
-        utils::convert_nat_to_u64(amount).expect("transfer failed - unable to convert amount");
+    let amount_u64: u64 = utils::convert_nat_to_u64(amount.clone())
+        .expect("transfer failed - unable to convert amount");
     let fee = compute_fee(amount_u64);
     ledger.transfer(&caller, &to, amount_u64, fee)?;
 
-    let transaction = Transaction {
-        timestamp: ic_kit::ic::time(),
-        cycles: amount_u64,
-        fee,
-        kind: TransactionKind::Transfer {
-            from: caller,
-            to: to,
-        },
+    insert_into_cap(TxRecordExt {
+        caller: None,
+        from: caller,
+        to: to,
+        amount: amount,
+        fee: Nat::from(fee),
+        op: Operation::transfer,
+        timestamp: Int::from(ic_kit::ic::time()),
+        index: Nat::from(0),
         status: TransactionStatus::SUCCEEDED,
-    };
-
-    Ok(Nat::from(
-        ic_kit::ic::get_mut::<HistoryBuffer>().push(transaction.clone()),
-    ))
+        method_name: "".to_string(),
+    })
+    .await
 }
 
 #[update(name=transferFrom)]
@@ -284,29 +284,25 @@ pub async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> TxRec
 
     let caller = ic_kit::ic::caller();
 
-    crate::progress().await;
-
     let ledger = ic_kit::ic::get_mut::<Ledger>();
-    let amount_u64: u64 =
-        utils::convert_nat_to_u64(amount).expect("transfer failed - unable to convert amount");
+    let amount_u64: u64 = utils::convert_nat_to_u64(amount.clone())
+        .expect("transfer failed - unable to convert amount");
     let fee = compute_fee(amount_u64);
     ledger.transfer_from(&caller, &from, &to, amount_u64, fee)?;
 
-    let transaction = Transaction {
-        timestamp: ic_kit::ic::time(),
-        cycles: amount_u64,
-        fee,
-        kind: TransactionKind::TransferFrom {
-            caller: caller,
-            from: from,
-            to: to,
-        },
+    insert_into_cap(TxRecordExt {
+        caller: Some(caller),
+        from: from,
+        to: to,
+        amount: amount,
+        fee: Nat::from(fee),
+        op: Operation::transferFrom,
+        timestamp: Int::from(ic_kit::ic::time()),
+        index: Nat::from(0),
         status: TransactionStatus::SUCCEEDED,
-    };
-
-    Ok(Nat::from(
-        ic_kit::ic::get_mut::<HistoryBuffer>().push(transaction.clone()),
-    ))
+        method_name: "".to_string(),
+    })
+    .await
 }
 
 //////////////////// END OF ERC-20 ///////////////////////
@@ -318,8 +314,6 @@ pub async fn transfer(args: TransferArguments) -> Result<TransactionId, Transfer
     let ic = get_context();
     let caller = ic.caller();
 
-    crate::progress().await;
-
     let fee = compute_fee(args.amount);
     let ledger = ic.get_mut::<Ledger>();
     ledger
@@ -327,24 +321,28 @@ pub async fn transfer(args: TransferArguments) -> Result<TransactionId, Transfer
         .map_err(|_| TransferError::InsufficientBalance)?;
     ledger.deposit(&args.to, args.amount);
 
-    let transaction = Transaction {
-        timestamp: ic.time(),
-        cycles: args.amount,
-        fee,
-        kind: TransactionKind::Transfer {
+    insert_legacy_into_cap::<TransferError>(
+        TxRecordExt {
+            caller: None,
             from: caller,
             to: args.to,
+            amount: Nat::from(args.amount),
+            fee: Nat::from(fee),
+            op: Operation::transfer,
+            timestamp: Int::from(ic_kit::ic::time()),
+            index: Nat::from(0),
+            status: TransactionStatus::SUCCEEDED,
+            method_name: "".to_string(),
         },
-        status: TransactionStatus::SUCCEEDED,
-    };
-
-    let id = ic.get_mut::<HistoryBuffer>().push(transaction);
-    Ok(id)
+        TransferError::CapInsertion,
+    )
+    .await
 }
 
-#[derive(CandidType, Debug)]
+#[derive(CandidType, Clone, Debug)]
 pub enum MintError {
     NotSufficientLiquidity,
+    CapInsertion,
 }
 
 #[update]
@@ -353,8 +351,6 @@ pub async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError
 
     let ic = get_context();
     let caller = ic.caller();
-
-    crate::progress().await;
 
     let account = account.unwrap_or(caller);
     let available = ic.msg_cycles_available();
@@ -370,16 +366,22 @@ pub async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError
     let ledger = ic.get_mut::<Ledger>();
     ledger.deposit(&account, cycles);
 
-    let transaction = Transaction {
-        timestamp: ic.time(),
-        cycles,
-        fee,
-        kind: TransactionKind::Mint { to: account },
-        status: TransactionStatus::SUCCEEDED,
-    };
-
-    let id = ic.get_mut::<HistoryBuffer>().push(transaction);
-    Ok(id)
+    insert_legacy_into_cap::<MintError>(
+        TxRecordExt {
+            caller: None,
+            from: caller,
+            to: account,
+            amount: Nat::from(cycles),
+            fee: Nat::from(fee),
+            op: Operation::mint,
+            timestamp: Int::from(ic_kit::ic::time()),
+            index: Nat::from(0),
+            status: TransactionStatus::SUCCEEDED,
+            method_name: "".to_string(),
+        },
+        MintError::CapInsertion,
+    )
+    .await
 }
 
 #[derive(Deserialize, CandidType)]
@@ -388,11 +390,12 @@ pub struct BurnArguments {
     pub amount: u64,
 }
 
-#[derive(CandidType, Debug)]
+#[derive(CandidType, Clone, Debug)]
 pub enum BurnError {
     InsufficientBalance,
     InvalidTokenContract,
     NotSufficientLiquidity,
+    CapInsertion,
 }
 
 #[update]
@@ -436,32 +439,43 @@ pub async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
                 ledger.deposit(&caller, refunded);
             }
 
-            let id = ic.get_mut::<HistoryBuffer>().push(Transaction {
-                timestamp: ic.time(),
-                cycles,
-                fee: actual_fee,
-                kind: TransactionKind::Burn {
-                    from: caller.clone(),
+            insert_legacy_into_cap::<BurnError>(
+                TxRecordExt {
+                    caller: None,
+                    from: caller,
                     to: args.canister_id,
+                    amount: Nat::from(cycles),
+                    fee: Nat::from(actual_fee),
+                    op: Operation::burn,
+                    timestamp: Int::from(ic_kit::ic::time()),
+                    index: Nat::from(0),
+                    status: TransactionStatus::SUCCEEDED,
+                    method_name: "".to_string(),
                 },
-                status: TransactionStatus::SUCCEEDED,
-            });
-
-            Ok(id)
+                BurnError::CapInsertion,
+            )
+            .await
         }
         Err(_) => {
             ledger.deposit(&caller, args.amount);
 
-            ic.get_mut::<HistoryBuffer>().push(Transaction {
-                timestamp: ic.time(),
-                cycles: 0,
-                fee: deduced_fee,
-                kind: TransactionKind::Burn {
-                    from: caller.clone(),
+            insert_legacy_into_cap::<BurnError>(
+                TxRecordExt {
+                    caller: None,
+                    from: caller,
                     to: args.canister_id,
+                    amount: Nat::from(0),
+                    fee: Nat::from(deduced_fee),
+                    op: Operation::burn,
+                    timestamp: Int::from(ic_kit::ic::time()),
+                    index: Nat::from(0),
+                    status: TransactionStatus::FAILED,
+                    method_name: "".to_string(),
                 },
-                status: TransactionStatus::FAILED,
-            });
+                BurnError::InvalidTokenContract,
+            )
+            .await;
+
             Err(BurnError::InvalidTokenContract)
         }
     }
@@ -665,7 +679,6 @@ mod tests {
 pub async fn balance(account: Option<Principal>) -> u64 {
     let ic = get_context();
     let caller = ic.caller();
-    crate::progress().await;
     let ledger = ic.get::<Ledger>();
     ledger.balance(&account.unwrap_or(caller))
 }

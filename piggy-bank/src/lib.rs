@@ -13,6 +13,7 @@ struct PerformMintArgs {
 #[derive(CandidType, Deserialize, Debug)]
 enum MintError {
     NotSufficientLiquidity,
+    CapInsertion,
 }
 
 #[update]

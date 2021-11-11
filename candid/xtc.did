@@ -42,6 +42,7 @@ type TxReceipt =
    Err: variant {
           InsufficientAllowance;
           InsufficientBalance;
+          Other;
         };
    Ok: nat;
  };
@@ -54,6 +55,7 @@ type BurnError = variant {
     InsufficientBalance;
     InvalidTokenContract;
     NotSufficientLiquidity;
+    CapInsertion;
 };
 
 type BurnResult = variant {
@@ -66,6 +68,7 @@ type TransferError = variant {
     AmountTooLarge;
     CallFailed;
     Unknown;
+    CapInsertion;
 };
 
 type TransferResponse = variant {
@@ -75,6 +78,7 @@ type TransferResponse = variant {
 
 type MintError = variant {
     NotSufficientLiquidity;
+    CapInsertion;
 };
 
 type MintResult = variant {
@@ -127,6 +131,7 @@ type EventDetail = variant {
 type TransactionStatus = variant {
     SUCCEEDED;
     FAILED;
+    INPROGRESS;
 };
 
 type Event = record {
@@ -202,7 +207,6 @@ service : {
 
     // History
     get_transaction : (id: TransactionId) -> (opt Event);
-    events : (record { offset: opt nat64; limit: nat16 }) -> (EventsConnection) query;
 
     // Management
     halt : () -> ();
