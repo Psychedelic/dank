@@ -25,9 +25,19 @@ Each Cycles Token (XTC) is backed 1-to-1 with 1 Trillion Cycles **(1 XTC = 1 Tri
 >Dank's Cycles Token (XTC) is an Alpha product and is in active development. During this testing/development period, the Dank core team will have control over the canister's upgradeability and the "stop/halt" feature to facilitate bug and security updates, prevent malicious acts, and grow the Main Dank Canister in features.
 >When the project reaches a solid maturity level, it will transition towards a fully community-owned governance system.
 
+
+## Wrapped ICP - WICP
+
+Wrapped ICP (WICP) is a wrapped version of the IC's native token, ICP. Each WICP will be backed 1:1 with ICP, meaning that 1 WICP will always have the exact same value as 1 ICP. The only difference is that, unlike ICP, WICP uses the DIP20 fungible token standard that is specifically designed to allow for interoperability between dApps and other tokens.
+
+- [Wrapped ICP Website](https://dank.ooo/wicp/) 
+- [Using WICP Guide](https://docs.dank.ooo/wicp/getting-started/)
+- [WICP Repo](https://github.com/psychedelic/wicp)
+
+
 ## Development
 
-The canisters are written in rust. To develop against them requires the rust toolchain, and node to support some build scripts; please ensure these are installed.
+The canisters are written in Rust and Motoko. To develop against them requires the rust toolchain, and node to support some build scripts; please ensure these are installed.
 
 To run the tests:
 
