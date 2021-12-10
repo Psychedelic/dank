@@ -19,7 +19,7 @@ dfx deploy --with-cycles 12000000000000 piggy-bank
 To setup use local variables:
 
 ```shell
-xtcID=$(dfx canister id xtc)  
+xtcID=$(dfx canister id xtc)
 walletId=$(dfx identity get-wallet)
 principalId=$(dfx identity get-principal)
 
@@ -42,7 +42,7 @@ dfx canister call xtc stats
 # history_events should be 1
 
 # Check your balance has the cycles
-dfx canister call xtc balance "(null)"
+dfx canister call xtc balanceOf "principal \"$principalId\""
 # shoule be (9_998_000_000_000 : nat64)
 
 # Check the transaction history
@@ -80,7 +80,7 @@ dfx canister call xtc balance "(null)"
 For a non-existant account
 
 ```shell
-dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
+dfx canister call xtc balanceOf "(principal \"$secondPrincipalId\")"
 
 # excpect returned balance as nat64: 0
 ```
@@ -91,15 +91,15 @@ Transfer to new user
 
 ```shell
 # Check from balance before
-dfx canister call xtc balance "(opt principal \"$principalId\")"
-dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
+dfx canister call xtc balanceOf "(principal \"$secondPrincipalId\")"
 
-dfx canister --no-wallet call xtc transfer "(record { to= principal \"$secondPrincipalId\"; amount= (1000:nat64) })"
+dfx canister --no-wallet call xtc transfer "(principal \"$secondPrincipalId\", 1000:nat)"
 
-dfx canister call xtc balance "(opt principal \"$principalId\")"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
 # expect balance before - transfer amount (1000) - fee (2_000_000_00) = 9_995_999_999_000
 
-dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
+dfx canister call xtc balanceOf "(principal \"$secondPrincipalId\")"
 # expect transfer amount (1000)
 
 dfx canister call xtc stats
@@ -112,28 +112,28 @@ dfx canister call xtc stats
 Transfer back to original user
 
 ```shell
-# Switch to other identity 
+# Switch to other identity
 dfx identity use manual-test-2
 
-dfx canister call xtc balance "(opt principal \"$principalId\")"
-dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
+dfx canister call xtc balanceOf "(principal \"$secondPrincipalId\")"
 
-dfx canister --no-wallet call xtc transfer "(record { to= principal \"$principalId\"; amount= (1000:nat64) })"
+dfx canister --no-wallet call xtc transfer "(principal \"$principalId\", 1000:nat)"
 # Insufficient balance due to fees
 
-dfx identity use manual-test-1 
-dfx canister --no-wallet call xtc transfer "(record { to= principal \"$secondPrincipalId\"; amount= (2_000_000_000:nat64) })"
-dfx canister call xtc balance "(opt principal \"$principalId\")" # 9_991_999_999_000
-dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
+dfx identity use manual-test-1
+dfx canister --no-wallet call xtc transfer "(principal \"$secondPrincipalId\", 2_000_000_000:nat)"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
+dfx canister call xtc balanceOf "(principal \"$secondPrincipalId\")"
 
 # Try again with fees
 dfx identity use manual-test-2
-dfx canister --no-wallet call xtc transfer "(record { to= principal \"$principalId\"; amount= (1000:nat64) })"
+dfx canister --no-wallet call xtc transfer "(principal \"$principalId\", 1000:nat)"
 
-dfx canister call xtc balance "(opt principal \"$secondPrincipalId\")"
+dfx canister call xtc balanceOf "(principal \"$secondPrincipalId\")"
 # should be 0
 
-dfx canister call xtc balance "(opt principal \"$principalId\")"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
 # should be back to 9_992_000_000_000 (10TC minus fees)
 
 dfx canister call xtc stats
@@ -151,12 +151,12 @@ dfx canister call xtc events "record { limit= 5: nat16 }"
 Transfer 0 cycles should be accepted but charge a fee
 
 ```shell
-# as identity 1 
+# as identity 1
 dfx identity use manual-test-1
-dfx canister --no-wallet call xtc transfer "(record { to= principal \"$secondPrincipalId\"; amount= (0:nat64) })"
-# transaction goes through
+dfx canister --no-wallet call xtc transfer "(principal \"$secondPrincipalId\", 0:nat)"
+# transaction doesn't go through
 
-dfx canister call xtc balance "(null)"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
 # 9_990_000_000_000 - fee taken
 ```
 
@@ -166,7 +166,7 @@ Burn to a canister:
 
 ```shell
 # Check xtc balance before
-dfx canister call xtc balance "(null)"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
 
 # Check piggy-bank balance before
 dfx canister status piggy-bank
@@ -175,7 +175,7 @@ dfx canister status piggy-bank
 dfx canister call xtc burn "record { canister_id= principal \"$(dfx canister id piggy-bank)\"; amount = 1000:nat64}"
 
 # Check balance
-dfx canister call xtc balance "(null)"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
 # should be amount less than before - including the fee
 
 # Chck piggy bank cycles balance
@@ -217,14 +217,14 @@ Create a canister with 1TC
 
 ```shell
 # Check personal balance before
-dfx canister call xtc balance "(null)"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
 
 dfx canister --no-wallet call xtc wallet_create_canister "(record {cycles= (1_000_000_000_000:nat64); controller= (null); })"
 
 # Returns canister principal id
 
 # Balance is decremented - including the fee
-dfx canister call xtc balance "(null)"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
 
 # check the newly created canister
 dfx canister --no-wallet status rkp4c-7iaaa-aaaaa-aaaca-cai
@@ -265,12 +265,12 @@ Proxy call with 0 additional cycles:
 
 ```shell
 # check your balance before
-dfx canister call xtc balance "(null)"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
 
 dfx canister call xtc wallet_call "(record { canister= principal \"$(dfx canister id piggy-bank)\"; method_name= \"whoami\"; args= blob \"DIDL\01nh\01\00\00\"; cycles= (0:nat64); })"
 
 # check your balance after
-dfx canister call xtc balance "(null)"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
 # fee has been taken
 
 dfx canister call xtc stats
@@ -283,13 +283,13 @@ Proxy call with enough cycles in balance
 
 ```shell
 # check your balance before
-dfx canister call xtc balance "(null)"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
 
 dfx canister call xtc wallet_call "(record { canister= principal \"$walletId\"; method_name= \"wallet_receive\"; args= blob \"DIDL\01nh\01\00\00\"; cycles= (1000:nat64); })"
 
 # succeeds with response
 
-dfx canister call xtc balance "(null)"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
 # balance decremented by 1000 + fee (2 billion)
 
 dfx canister call xtc get_transaction "(7)"
@@ -304,7 +304,7 @@ Check proxy call without enough cycles in balance:
 
 ```shell
 # check your balance before
-dfx canister call xtc balance "(null)"
+dfx canister call xtc balanceOf "(principal \"$principalId\")"
 
 dfx canister call xtc wallet_call "(record { canister= principal \"$walletId\"; method_name= \"wallet_receive\"; args= blob \"DIDL\01nh\01\00\00\"; cycles= (100_000_000_000_000:nat64); })"
 
@@ -327,12 +327,9 @@ dfx canister --no-wallet call xtc approve "(principal \"$secondPrincipalId\", (2
 
 # Check updated allowance
 dfx canister --no-wallet call xtc allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
-# expect 2000
+# expect 2000 + fee
 
-# Send enough to pay the fees
-dfx canister --no-wallet call xtc transfer "(record { to= principal \"$secondPrincipalId\"; amount= (2_000_000_000:nat64) })"
-
-dfx identity use manual-test-2  
+dfx identity use manual-test-2
 
 # attempt to transfer too much
 dfx canister --no-wallet call xtc transferFrom "(principal \"$principalId\", principal \"$secondPrincipalId\", (2001:nat))"
@@ -346,16 +343,13 @@ dfx canister --no-wallet call xtc allowance "(principal \"$principalId\", princi
 # should be 1000
 
 dfx canister --no-wallet call xtc transferFrom "(principal \"$principalId\", principal \"$secondPrincipalId\", (1000:nat))"
+# InsufficientAllowance
 
 # Check updated allowance
 dfx canister --no-wallet call xtc allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
-# should be 0
+# should be 1000
 
-# try tranferring again - should fail as allowance consumed
-dfx canister --no-wallet call xtc transferFrom "(principal \"$principalId\", principal \"$secondPrincipalId\", (1:nat))"
-# InsufficientAllowance
-
-dfx canister --no-wallet call xtc balance "(opt principal \"$secondPrincipalId\")"
+dfx canister call xtc balanceOf "(principal \"$secondPrincipalId\")"
 # should be 2_000
 
 dfx canister call xtc get_transaction "(10)"

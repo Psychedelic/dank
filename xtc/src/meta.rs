@@ -7,24 +7,6 @@ use ic_kit::{
     ic,
 };
 
-#[derive(CandidType)]
-pub struct TokenMetaData<'a> {
-    pub name: &'a str,
-    pub symbol: &'a str,
-    pub decimal: u8,
-    pub features: Vec<&'a str>,
-}
-
-#[query]
-pub fn meta() -> TokenMetaData<'static> {
-    TokenMetaData {
-        name: "Cycles",
-        symbol: "XTC",
-        decimal: 12,
-        features: vec!["history"],
-    }
-}
-
 #[query(name = "getMetadata")]
 pub fn get_metadata() -> Metadata<'static> {
     Metadata {
@@ -38,13 +20,13 @@ pub fn get_metadata() -> Metadata<'static> {
     }
 }
 
-#[update]
-fn meta_certified() -> TokenMetaData<'static> {
-    meta()
+#[query(name=nameErc20)]
+fn name_erc20() -> &'static str {
+    name()
 }
 
-#[query(name = "nameErc20")]
-fn name_erc20() -> &'static str {
+#[query]
+fn name() -> &'static str {
     get_metadata().name
 }
 

@@ -5,7 +5,6 @@ use crate::fee::compute_fee;
 use crate::history::{HistoryBuffer, Transaction, TransactionKind, TransactionStatus};
 use crate::ledger::Ledger;
 use crate::management::IsShutDown;
-use crate::meta::meta;
 use ic_kit::candid::CandidType;
 use ic_kit::interfaces::management::{
     CanisterSettings, CreateCanister, CreateCanisterArgument, WithCanisterId,
@@ -14,11 +13,6 @@ use ic_kit::interfaces::Method;
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context, Principal};
 use serde::*;
-
-#[query]
-pub fn name() -> Option<&'static str> {
-    Some(meta().name)
-}
 
 #[derive(CandidType, Deserialize)]
 pub struct CallCanisterArgs {

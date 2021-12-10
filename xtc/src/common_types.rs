@@ -1,7 +1,7 @@
 use derive_builder::*;
 use derive_new::*;
 use ic_kit::{
-    candid::{CandidType, Int, Nat},
+    candid::{CandidType, Deserialize, Int, Nat},
     Principal,
 };
 use std::convert::{TryFrom, TryInto};
@@ -31,10 +31,17 @@ pub struct Metadata<'a> {
     pub totalSupply: Nat,
 }
 
-#[derive(CandidType, Debug, Eq, PartialEq)]
+#[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
 pub enum TxError {
     InsufficientAllowance,
     InsufficientBalance,
+    ErrorOperationStyle,
+    Unauthorized,
+    LedgerTrap,
+    ErrorTo,
+    Other,
+    BlockUsed,
+    AmountTooSmall,
 }
 
 pub type TxReceipt = Result<Nat, TxError>;

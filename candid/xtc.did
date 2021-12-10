@@ -37,14 +37,18 @@ type TxRecord =
    status: TransactionStatus;
  };
 
-type TxReceipt =
- variant {
-   Err: variant {
-          InsufficientAllowance;
-          InsufficientBalance;
-        };
-   Ok: nat;
- };
+type TxError = variant {
+  InsufficientAllowance;
+  InsufficientBalance;
+  ErrorOperationStyle;
+  Unauthorized;
+  LedgerTrap;
+  ErrorTo;
+  Other;
+  BlockUsed;
+  AmountTooSmall;
+};
+type TxReceipt = variant { Ok : nat; Err : TxError };
 
 ////////// END ERC-20 //////////
 
@@ -59,18 +63,6 @@ type BurnError = variant {
 type BurnResult = variant {
     Ok : TransactionId;
     Err: BurnError;
-};
-
-type TransferError = variant {
-    InsufficientBalance;
-    AmountTooLarge;
-    CallFailed;
-    Unknown;
-};
-
-type TransferResponse = variant {
-    Ok : TransactionId;
-    Err: TransferError;
 };
 
 type MintError = variant {
@@ -143,13 +135,6 @@ type EventsConnection = record {
     next_canister_id: opt principal;
 };
 
-type TokenMetaData = record {
-    name    : text;
-    symbol  : text;
-    decimal : nat8;
-    features: vec text;
-};
-
 type Stats = record {
     supply: nat;
     fee: nat;
@@ -183,22 +168,17 @@ service : {
    historySize: () -> (nat) query;
    logo: () -> (text) query;
    nameErc20: () -> (text) query;
+   name: () -> (text) query;
    symbol: () -> (text) query;
    totalSupply: () -> (nat) query;
    transferErc20: (principal, nat) -> (TxReceipt);
+   transfer: (principal, nat) -> (TxReceipt);
    transferFrom: (principal, principal, nat) -> (TxReceipt);
+   mint: (principal, nat) -> (MintResult);
    ////////// END ERC-20 //////////
 
-    // Return all of the meta data of a token.
-    meta : () -> (TokenMetaData) query;
-
-    // Return all of the meta data of a token as an update.
-    meta_certified : () -> (TokenMetaData);
-
-    balance: (opt principal) -> (amount: nat64);
-    transfer: (record { to: principal; amount: nat64 }) -> (TransferResponse);
-    mint: (opt principal) -> (MintResult);
     burn: (record { canister_id: principal; amount: nat64 }) -> (BurnResult);
+    balance: (opt principal) -> (amount: nat64);
 
     // History
     get_transaction : (id: TransactionId) -> (opt Event);
@@ -211,8 +191,6 @@ service : {
     stats : () -> (Stats) query;
 
     // ----------- Cycles wallet compatible API
-
-    name : () -> (opt text) query;
 
     wallet_balance: () -> (record { amount: nat64 }) query;
     wallet_send: (record { canister: principal; amount: nat64 }) -> (ResultSend);

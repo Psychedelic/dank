@@ -41,6 +41,7 @@ pub struct TransactionV0 {
     pub cycles: u64,
     pub fee: u64,
     pub kind: TransactionKind,
+    pub status: TransactionStatus,
 }
 
 impl From<&TransactionV0> for Transaction {
@@ -50,7 +51,7 @@ impl From<&TransactionV0> for Transaction {
             cycles: transaction_v0.cycles,
             fee: transaction_v0.fee,
             kind: transaction_v0.kind.clone(),
-            status: TransactionStatus::SUCCEEDED,
+            status: transaction_v0.status.clone(),
         }
     }
 }

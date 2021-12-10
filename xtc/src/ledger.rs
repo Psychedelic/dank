@@ -4,7 +4,6 @@ use crate::history::{
     HistoryBuffer, Transaction, TransactionId, TransactionKind, TransactionStatus,
 };
 use crate::management::IsShutDown;
-use crate::meta::meta;
 use crate::stats::StatsData;
 use crate::utils;
 use ic_kit::candid::{CandidType, Int, Nat};
@@ -198,20 +197,6 @@ pub async fn balance_of(account: Principal) -> Nat {
     Nat::from(ledger.balance(&account))
 }
 
-#[derive(Deserialize, CandidType)]
-pub struct TransferArguments {
-    pub to: Principal,
-    pub amount: u64,
-}
-
-#[derive(CandidType, Debug)]
-pub enum TransferError {
-    InsufficientBalance,
-    AmountTooLarge,
-    CallFailed,
-    Unknown,
-}
-
 #[query]
 pub async fn allowance(from: Principal, to: Principal) -> Nat {
     return get_context().get::<Ledger>().allowance(&from, &to).into();
@@ -250,6 +235,11 @@ pub async fn approve(to: Principal, amount: Nat) -> TxReceipt {
 
 #[update(name=transferErc20)]
 pub async fn transfer_erc20(to: Principal, amount: Nat) -> TxReceipt {
+    transfer(to, amount).await
+}
+
+#[update]
+pub async fn transfer(to: Principal, amount: Nat) -> TxReceipt {
     IsShutDown::guard();
 
     let caller = ic_kit::ic::caller();
@@ -311,44 +301,13 @@ pub async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> TxRec
 
 //////////////////// END OF ERC-20 ///////////////////////
 
-#[update]
-pub async fn transfer(args: TransferArguments) -> Result<TransactionId, TransferError> {
-    IsShutDown::guard();
-
-    let ic = get_context();
-    let caller = ic.caller();
-
-    crate::progress().await;
-
-    let fee = compute_fee(args.amount);
-    let ledger = ic.get_mut::<Ledger>();
-    ledger
-        .withdraw(&caller, args.amount + fee)
-        .map_err(|_| TransferError::InsufficientBalance)?;
-    ledger.deposit(&args.to, args.amount);
-
-    let transaction = Transaction {
-        timestamp: ic.time(),
-        cycles: args.amount,
-        fee,
-        kind: TransactionKind::Transfer {
-            from: caller,
-            to: args.to,
-        },
-        status: TransactionStatus::SUCCEEDED,
-    };
-
-    let id = ic.get_mut::<HistoryBuffer>().push(transaction);
-    Ok(id)
-}
-
 #[derive(CandidType, Debug)]
 pub enum MintError {
     NotSufficientLiquidity,
 }
 
 #[update]
-pub async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError> {
+pub async fn mint(to: Principal, _amount: Nat) -> TxReceipt {
     IsShutDown::guard();
 
     let ic = get_context();
@@ -356,7 +315,6 @@ pub async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError
 
     crate::progress().await;
 
-    let account = account.unwrap_or(caller);
     let available = ic.msg_cycles_available();
     let fee = compute_fee(available);
 
@@ -368,18 +326,19 @@ pub async fn mint(account: Option<Principal>) -> Result<TransactionId, MintError
     let cycles = accepted - fee;
 
     let ledger = ic.get_mut::<Ledger>();
-    ledger.deposit(&account, cycles);
+    ledger.deposit(&to, cycles);
 
     let transaction = Transaction {
         timestamp: ic.time(),
         cycles,
         fee,
-        kind: TransactionKind::Mint { to: account },
+        kind: TransactionKind::Mint { to },
         status: TransactionStatus::SUCCEEDED,
     };
 
-    let id = ic.get_mut::<HistoryBuffer>().push(transaction);
-    Ok(id)
+    Ok(Nat::from(
+        ic_kit::ic::get_mut::<HistoryBuffer>().push(transaction.clone()),
+    ))
 }
 
 #[derive(Deserialize, CandidType)]

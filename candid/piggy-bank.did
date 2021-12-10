@@ -1,17 +1,21 @@
 type TransactionId = nat64;
 
-type MintError = variant {
-    NotSufficientLiquidity;
+type TxError = variant {
+  InsufficientAllowance;
+  InsufficientBalance;
+  ErrorOperationStyle;
+  Unauthorized;
+  LedgerTrap;
+  ErrorTo;
+  Other;
+  BlockUsed;
+  AmountTooSmall;
 };
-
-type MintResult = variant {
-    Ok : TransactionId;
-    Err: MintError;
-};
+type TxReceipt = variant { Ok : nat; Err : TxError };
 
 service : {
     balance: () -> (amount: nat64);
     get_available_cycles: () -> (amount: nat64);
-    perform_mint: (record { canister: principal; account: opt principal; cycles: nat64 }) -> (MintResult);
+    perform_mint: (record { canister: principal; account: opt principal; cycles: nat64 }) -> (TxReceipt);
     whoami : () -> (principal);
 }
