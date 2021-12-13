@@ -1,4 +1,4 @@
-use ic_kit::candid::CandidType;
+use ic_kit::candid::{CandidType, Nat};
 use ic_kit::macros::*;
 use ic_kit::*;
 use serde::*;
@@ -10,13 +10,23 @@ struct PerformMintArgs {
     cycles: u64,
 }
 
-#[derive(CandidType, Deserialize, Debug)]
-enum MintError {
-    NotSufficientLiquidity,
+#[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
+pub enum TxError {
+    InsufficientAllowance,
+    InsufficientBalance,
+    ErrorOperationStyle,
+    Unauthorized,
+    LedgerTrap,
+    ErrorTo,
+    Other,
+    BlockUsed,
+    AmountTooSmall,
 }
 
+pub type TxReceipt = Result<Nat, TxError>;
+
 #[update]
-async fn perform_mint(args: PerformMintArgs) -> Result<u64, MintError> {
+async fn perform_mint(args: PerformMintArgs) -> TxReceipt {
     let ic = get_context();
 
     let account = match args.account {
@@ -25,11 +35,11 @@ async fn perform_mint(args: PerformMintArgs) -> Result<u64, MintError> {
     };
 
     if ic.balance() < args.cycles {
-        return Err(MintError::NotSufficientLiquidity);
+        return Err(TxError::InsufficientBalance);
     }
 
     match ic
-        .call_with_payment(args.canister, "mint", (Some(account),), args.cycles)
+        .call_with_payment(args.canister, "mint", (account, Nat::from(0)), args.cycles)
         .await
     {
         Ok((r,)) => r,
@@ -66,8 +76,8 @@ mod tests {
             .with_handler(
                 Method::new()
                     .expect_cycles(300)
-                    .response::<Result<u64, MintError>>(Ok(17))
-                    .expect_arguments((Some(&alice),)),
+                    .response::<TxReceipt>(Ok(Nat::from(17)))
+                    .expect_arguments((alice, Nat::from(0))),
             )
             .inject();
 
@@ -77,9 +87,8 @@ mod tests {
                 account: None,
                 cycles: 300
             })
-            .await
-            .unwrap(),
-            17
+            .await,
+            Ok(Nat::from(17))
         );
 
         MockContext::new()
@@ -87,8 +96,8 @@ mod tests {
             .with_handler(
                 Method::new()
                     .expect_cycles(140)
-                    .response::<Result<u64, MintError>>(Ok(18))
-                    .expect_arguments((Some(&bob),)),
+                    .response::<TxReceipt>(Ok(Nat::from(18)))
+                    .expect_arguments((bob, Nat::from(0))),
             )
             .inject();
 
@@ -98,9 +107,8 @@ mod tests {
                 account: Some(bob),
                 cycles: 140
             })
-            .await
-            .unwrap(),
-            18
+            .await,
+            Ok(Nat::from(18))
         );
     }
 

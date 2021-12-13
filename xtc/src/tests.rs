@@ -1,6 +1,6 @@
 use crate::fee::compute_fee;
 use crate::ledger::Ledger;
-use ic_kit::candid::CandidType;
+use ic_kit::candid::{CandidType, Nat};
 use ic_kit::interfaces::management::WithCanisterId;
 use ic_kit::{async_test, Context, MockContext, Principal, RejectionCode};
 use ic_kit::{mock_principals, Method, RawHandler};
@@ -167,12 +167,9 @@ async fn transfer_fee() {
 
     reset_ledger(ctx);
 
-    transfer(TransferArguments {
-        to: mock_principals::bob(),
-        amount: 5000,
-    })
-    .await
-    .expect("Unexpected error.");
+    transfer(mock_principals::bob(), Nat::from(5000))
+        .await
+        .expect("Unexpected error.");
 
     assert_eq!(
         ctx.get::<Ledger>().balance(&mock_principals::alice()),
@@ -186,6 +183,7 @@ async fn transfer_fee() {
 }
 
 #[async_test]
+#[should_panic]
 async fn transfer_fee_zero() {
     use crate::ledger::*;
 
@@ -195,12 +193,9 @@ async fn transfer_fee_zero() {
 
     reset_ledger(ctx);
 
-    transfer(TransferArguments {
-        to: mock_principals::bob(),
-        amount: 0,
-    })
-    .await
-    .expect("Unexpected error.");
+    transfer(mock_principals::bob(), Nat::from(0))
+        .await
+        .expect("Unexpected error.");
 
     assert_eq!(
         ctx.get::<Ledger>().balance(&mock_principals::alice()),
@@ -222,7 +217,9 @@ async fn mint_fee() {
         .with_msg_cycles(50_000_000_000)
         .inject();
 
-    mint(None).await.expect("Unexpected error.");
+    mint(mock_principals::alice(), Nat::from(0))
+        .await
+        .expect("Unexpected error.");
 
     assert_eq!(
         ctx.get::<Ledger>().balance(&mock_principals::alice()),
