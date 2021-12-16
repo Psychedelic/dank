@@ -46,6 +46,14 @@ pub enum TxError {
 
 pub type TxReceipt = Result<Nat, TxError>;
 
+#[derive(CandidType, Debug, Eq, PartialEq)]
+pub enum TxErrorLegacy {
+    InsufficientAllowance,
+    InsufficientBalance,
+}
+
+pub type TxReceiptLegacy = Result<Nat, TxErrorLegacy>;
+
 #[derive(CandidType, Clone, new)]
 pub struct TxRecord {
     pub caller: Option<Principal>,
