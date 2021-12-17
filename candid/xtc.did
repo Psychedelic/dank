@@ -65,6 +65,15 @@ type BurnResult = variant {
     Err: BurnError;
 };
 
+type TxReceiptLegacy =
+ variant {
+   Err: variant {
+          InsufficientAllowance;
+          InsufficientBalance;
+        };
+   Ok: nat;
+ };
+
 type MintError = variant {
     NotSufficientLiquidity;
 };
@@ -171,7 +180,7 @@ service : {
    name: () -> (text) query;
    symbol: () -> (text) query;
    totalSupply: () -> (nat) query;
-   transferErc20: (principal, nat) -> (TxReceipt);
+   transferErc20: (principal, nat) -> (TxReceiptLegacy);
    transfer: (principal, nat) -> (TxReceipt);
    transferFrom: (principal, principal, nat) -> (TxReceipt);
    mint: (principal, nat) -> (MintResult);

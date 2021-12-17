@@ -1,4 +1,6 @@
-use crate::common_types::{Operation, TxError, TxReceipt, TxRecord};
+use crate::common_types::{
+    Operation, TxError, TxErrorLegacy, TxReceipt, TxReceiptLegacy, TxRecord,
+};
 use crate::fee::compute_fee;
 use crate::history::{
     HistoryBuffer, Transaction, TransactionId, TransactionKind, TransactionStatus,
@@ -234,8 +236,11 @@ pub async fn approve(to: Principal, amount: Nat) -> TxReceipt {
 }
 
 #[update(name=transferErc20)]
-pub async fn transfer_erc20(to: Principal, amount: Nat) -> TxReceipt {
-    transfer(to, amount).await
+pub async fn transfer_erc20(to: Principal, amount: Nat) -> TxReceiptLegacy {
+    transfer(to, amount).await.map_err(|err| match err {
+        TxError::InsufficientAllowance => TxErrorLegacy::InsufficientAllowance,
+        _ => TxErrorLegacy::InsufficientBalance,
+    })
 }
 
 #[update]
