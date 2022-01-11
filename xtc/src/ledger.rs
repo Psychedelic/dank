@@ -8,12 +8,21 @@ use crate::history::{
 use crate::management::IsShutDown;
 use crate::stats::StatsData;
 use crate::utils;
+use ic_cdk::api::{call::call, caller};
 use ic_kit::candid::{CandidType, Int, Nat};
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context, Principal};
+use ledger_canister::{
+    account_identifier::{AccountIdentifier, Subaccount},
+    tokens::Tokens,
+    CyclesResponse,
+    NotifyCanisterArgs,
+    Block, BlockHeight, Memo, Operation as Operate, SendArgs,
+};
 use serde::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
+use std::str::FromStr;
 
 #[derive(Default)]
 pub struct Ledger {
@@ -302,6 +311,117 @@ pub async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> TxRec
     Ok(Nat::from(
         ic_kit::ic::get_mut::<HistoryBuffer>().push(transaction.clone()),
     ))
+}
+
+pub type UsedBlocks = HashSet<BlockHeight>;
+
+const THRESHOLD: Tokens = Tokens::from_e8s(0); // 0;
+const ICPFEE: Tokens = Tokens::from_e8s(10000);
+const MEMO_TOP_UP_CANISTER: u64 = 1347768404_u64;
+
+#[update]
+pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHeight) -> TxReceipt {
+    IsShutDown::guard();
+
+    let ic = get_context();
+    let caller = ic.caller();
+
+    crate::progress().await;
+
+    // https://github.com/Psychedelic/ledger-block-history
+    let block = ic
+        .call::<_, (Result<Result<Block, Principal>, String>,), _>(
+            Principal::from_text("7r4rw-6aaaa-aaaam-qabka-cai").unwrap(),
+            "block",
+            (block_height,),
+        )
+        .await
+        .map_err(|_| TxError::LedgerProxyFailed)?
+        .0
+        .map_err(|_| TxError::FetchBlockFailed)?
+        .map_err(|_| TxError::BlockNotFound)?;
+
+    let (from, to, amount) = match block.transaction.operation {
+        Operate::Transfer {
+            from,
+            to,
+            amount,
+            fee: _,
+        } => (from, to, amount),
+        _ => {
+            return Err(TxError::ErrorOperationStyle);
+        }
+    };
+
+    let used_blocks = ic.get_mut::<UsedBlocks>();
+
+    // guard
+    if !used_blocks.insert(block_height) {
+        return Err(TxError::BlockUsed);
+    }
+
+    let caller_account = AccountIdentifier::new(ic_types::PrincipalId::from(caller), sub_account);
+    let xtc_account = AccountIdentifier::new(ic_types::PrincipalId::from(ic.id()), None);
+
+    if caller_account != from {
+        used_blocks.remove(&block_height);
+        return Err(TxError::Unauthorized);
+    }
+
+    if xtc_account != to {
+        used_blocks.remove(&block_height);
+        return Err(TxError::ErrorTo);
+    }
+
+    if amount < THRESHOLD {
+        used_blocks.remove(&block_height);
+        return Err(TxError::AmountTooSmall);
+    }
+
+    let value = Nat::from(Tokens::get_e8s(amount));
+
+    let block_height = ic
+        .call::<_,(u64,), _>(
+            Principal::from_text("ryjl3-tyaaa-aaaaa-aaaba-cai").unwrap(),
+            "send_dfx",
+            (SendArgs {
+                memo: Memo(MEMO_TOP_UP_CANISTER),
+                amount: (amount - ICPFEE).unwrap(),
+                fee: ICPFEE,
+                from_subaccount: None,
+                to: AccountIdentifier::new(
+                    ic_types::PrincipalId::from_str("rkp4c-7iaaa-aaaaa-aaaca-cai").unwrap(),
+                    None,
+                ),
+                created_at_time: None,
+            },),
+        )
+        .await
+        .map_err(|_| {
+            used_blocks.remove(&block_height);
+            TxError::LedgerTrap
+        })?
+        .0;
+
+    let result = ic
+        .call::<_,(CyclesResponse,),_>(
+            Principal::from_text("ryjl3-tyaaa-aaaaa-aaaba-cai").unwrap(),
+            "notify_dfx",
+            (NotifyCanisterArgs {
+            block_height,
+            max_fee: ICPFEE,
+            from_subaccount: None,
+            to_canister: ic_types::CanisterId::new(ic_types::PrincipalId::from_str("rkp4c-7iaaa-aaaaa-aaaca-cai").unwrap()).unwrap(),
+            to_subaccount:None
+            },),
+        ).await
+        .map_err(|_| {
+            used_blocks.remove(&block_height);
+            TxError::MintByICP
+        })?
+        .0;
+
+    Ok(Nat::from(1))
 }
 
 //////////////////// END OF ERC-20 ///////////////////////
