@@ -8,7 +8,9 @@ use crate::history::{
 use crate::management::IsShutDown;
 use crate::stats::StatsData;
 use crate::utils;
-use cycles_minting_canister::IcpXdrConversionRateCertifiedResponse;
+use cycles_minting_canister::{
+    IcpXdrConversionRateCertifiedResponse, TokensToCycles, DEFAULT_CYCLES_PER_XDR,
+};
 use dfn_core::api::call_with_cleanup;
 use dfn_protobuf::protobuf;
 use ic_kit::candid::{CandidType, Int, Nat};
@@ -480,14 +482,18 @@ pub async fn mint_by_icp(block_height: BlockHeight) -> TxReceipt {
     // Credit XTC
     match result {
         CyclesResponse::ToppedUp(()) => {
-            let cycles = compute_fee(0); // TODO: calculate cycles with rate
+            let cycles = (TokensToCycles {
+                xdr_permyriad_per_icp: rate.data.xdr_permyriad_per_icp,
+                cycles_per_xdr: DEFAULT_CYCLES_PER_XDR.into(),
+            })
+            .to_cycles(amount);
 
             let ledger = ic.get_mut::<Ledger>();
-            ledger.deposit(&caller, cycles);
+            ledger.deposit(&caller, cycles.into());
 
             let transaction = Transaction {
                 timestamp: ic.time(),
-                cycles,
+                cycles: cycles.into(),
                 fee: compute_fee(0),
                 kind: TransactionKind::Mint { to: caller },
                 status: TransactionStatus::SUCCEEDED,
