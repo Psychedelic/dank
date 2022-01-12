@@ -419,6 +419,8 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
 
     let cycles_minting_canister = Principal::from_text("rkp4c-7iaaa-aaaaa-aaaca-cai").unwrap();
 
+    // ====================================================
+    // check xtc fee
     let rate = ic
         .call::<_, (IcpXdrConversionRateCertifiedResponse,), _>(
             cycles_minting_canister,
@@ -432,6 +434,24 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
         })?
         .0;
 
+    let cycles: u64 = (TokensToCycles {
+        xdr_permyriad_per_icp: rate.data.xdr_permyriad_per_icp,
+        cycles_per_xdr: DEFAULT_CYCLES_PER_XDR.into(),
+    })
+    .to_cycles(amount)
+    .into();
+
+    let fee = compute_fee(0);
+    if cycles <= fee {
+        used_blocks.remove(&block_height);
+        return Err(TxError::InsufficientXTCFee);
+    }
+
+    // actual user cycles
+    let cycles = cycles - fee;
+    // ====================================================
+
+    // ====================================================
     // Burn
     let result: Result<(u64,), _> = ic
         .call(
@@ -454,11 +474,13 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
         Ok((new_block_height,)) => new_block_height,
         Err(_) => return Err(TxError::LedgerTrap),
     };
+    // ====================================================
 
     // track `user transferred block` that map to `canister burned block`
     ic.get_mut::<UsedMapBlocks>()
         .insert(block_height, new_block_height);
 
+    // ====================================================
     // Notify
     let result = ic
         .call::<_, (CyclesResponse,), _>(
@@ -478,32 +500,26 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
         .await
         .map_err(|_| TxError::NotifyDfxFailed)?
         .0;
+    // ====================================================
 
+    // ====================================================
     // Credit XTC
     match result {
         CyclesResponse::ToppedUp(()) => {
-            let cycles = (TokensToCycles {
-                xdr_permyriad_per_icp: rate.data.xdr_permyriad_per_icp,
-                cycles_per_xdr: DEFAULT_CYCLES_PER_XDR.into(),
-            })
-            .to_cycles(amount);
-
-            let ledger = ic.get_mut::<Ledger>();
-            ledger.deposit(&caller, cycles.into());
-
-            let transaction = Transaction {
-                timestamp: ic.time(),
-                cycles: cycles.into(),
-                fee: compute_fee(0),
-                kind: TransactionKind::Mint { to: caller },
-                status: TransactionStatus::SUCCEEDED,
-            };
-            Ok(Nat::from(
-                ic_kit::ic::get_mut::<HistoryBuffer>().push(transaction),
-            ))
+            ic.get_mut::<Ledger>().deposit(&caller, cycles);
+            Ok(Nat::from(ic_kit::ic::get_mut::<HistoryBuffer>().push(
+                Transaction {
+                    timestamp: ic.time(),
+                    cycles,
+                    fee,
+                    kind: TransactionKind::Mint { to: caller },
+                    status: TransactionStatus::SUCCEEDED,
+                },
+            )))
         }
         _ => Err(TxError::UnexpectedCyclesResponse),
     }
+    // ====================================================
 }
 
 //////////////////// END OF ERC-20 ///////////////////////

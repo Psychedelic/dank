@@ -50,6 +50,7 @@ type TxError = variant {
   NotifyDfxFailed;
   UnexpectedCyclesResponse;
   AmountTooSmall;
+  InsufficientXTCFee;
 };
 type TxReceipt = variant { Ok : nat; Err : TxError };
 
