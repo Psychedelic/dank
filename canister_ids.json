@@ -1,9 +1,11 @@
 {
-    "xtc": {
-      "ic": "aanaa-xaaaa-aaaah-aaeiq-cai"
-    },
-    "piggy-bank": {
-      "ic": "ajol4-biaaa-aaaah-aaeja-cai"
-    }
+  "piggy-bank": {
+    "ic": "ajol4-biaaa-aaaah-aaeja-cai"
+  },
+  "xtc": {
+    "ic": "aanaa-xaaaa-aaaah-aaeiq-cai"
+  },
+  "xtc_test": {
+    "ic": "77646-fqaaa-aaaam-qabla-cai"
+  }
 }
-

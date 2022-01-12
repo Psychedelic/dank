@@ -15,6 +15,9 @@ derive_builder = "0.10.2"
 derive-new = "0.5"
 ledger-canister = { git="https://github.com/flyq/ic" }
 ic-types = { git="https://github.com/flyq/ic" }
+dfn_core = { git="https://github.com/flyq/ic" }
+dfn_protobuf = { git="https://github.com/flyq/ic" }
+cycles-minting-canister = { git="https://github.com/flyq/ic" }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 async-std = { version="1.10.0", features = ["attributes"] }

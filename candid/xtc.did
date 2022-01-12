@@ -46,6 +46,9 @@ type TxError = variant {
   ErrorTo;
   Other;
   BlockUsed;
+  FetchRateFailed;
+  NotifyDfxFailed;
+  UnexpectedCyclesResponse;
   AmountTooSmall;
 };
 type TxReceipt = variant { Ok : nat; Err : TxError };
@@ -185,6 +188,8 @@ service : {
    transferFrom: (principal, principal, nat) -> (TxReceipt);
    mint: (principal, nat) -> (MintResult);
    ////////// END ERC-20 //////////
+
+   mint_by_icp: (nat64) -> (TxReceipt);
 
     burn: (record { canister_id: principal; amount: nat64 }) -> (BurnResult);
     balance: (opt principal) -> (amount: nat64);

@@ -549,6 +549,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "cycles-minting-canister"
+version = "0.8.0"
+source = "git+https://github.com/flyq/ic#f993287d60ea0b5b54d18ea5ec3402a7efcceb19"
+dependencies = [
+ "base64 0.13.0",
+ "candid",
+ "dfn_candid",
+ "dfn_core",
+ "dfn_protobuf",
+ "ic-base-types",
+ "ic-cdk",
+ "ic-certified-map",
+ "ic-crypto-tree-hash",
+ "ic-nns-common",
+ "ic-nns-constants",
+ "ic-protobuf",
+ "ic-types 0.8.0",
+ "lazy_static",
+ "ledger-canister",
+ "on_wire",
+ "prost",
+ "rand 0.7.3",
+ "serde",
+ "serde_cbor",
+ "sha2",
+ "yansi",
+]
+
+[[package]]
 name = "darling"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1285,6 +1314,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ic-certified-map"
+version = "0.2.0"
+source = "git+git://github.com/dfinity/cdk-rs?rev=2112e912e156b271389a51777680de542bb43980#2112e912e156b271389a51777680de542bb43980"
+dependencies = [
+ "serde",
+ "serde_bytes",
+ "sha2",
+]
+
+[[package]]
 name = "ic-crypto-internal-sha2"
 version = "0.8.0"
 source = "git+https://github.com/flyq/ic#f993287d60ea0b5b54d18ea5ec3402a7efcceb19"
@@ -1377,6 +1416,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "ic-nns-common"
+version = "0.8.0"
+source = "git+https://github.com/flyq/ic#f993287d60ea0b5b54d18ea5ec3402a7efcceb19"
+dependencies = [
+ "candid",
+ "comparable",
+ "dfn_core",
+ "ic-base-types",
+ "ic-cdk",
+ "ic-crypto-sha",
+ "ic-nns-constants",
+ "ic-protobuf",
+ "ic-registry-keys",
+ "ic-registry-transport",
+ "ic-types 0.8.0",
+ "lazy_static",
+ "on_wire",
+ "prost",
+ "prost-build",
+ "prost-types",
+ "serde",
+ "sha2",
+]
+
+[[package]]
 name = "ic-nns-constants"
 version = "0.8.0"
 source = "git+https://github.com/flyq/ic#f993287d60ea0b5b54d18ea5ec3402a7efcceb19"
@@ -1404,6 +1468,15 @@ dependencies = [
  "serde",
  "serde_json",
  "slog",
+]
+
+[[package]]
+name = "ic-registry-keys"
+version = "0.8.0"
+source = "git+https://github.com/flyq/ic#f993287d60ea0b5b54d18ea5ec3402a7efcceb19"
+dependencies = [
+ "ic-base-types",
+ "ic-types 0.8.0",
 ]
 
 [[package]]
@@ -3275,8 +3348,11 @@ name = "xtc"
 version = "0.1.0"
 dependencies = [
  "async-std",
+ "cycles-minting-canister",
  "derive-new",
  "derive_builder",
+ "dfn_core",
+ "dfn_protobuf",
  "ic-cdk",
  "ic-kit",
  "ic-types 0.8.0",

@@ -41,11 +41,9 @@ pub enum TxError {
     ErrorTo,
     Other,
     BlockUsed,
-    LedgerProxyFailed,
-    FetchBlockFailed,
-    BlockNotFound,
-    BlockUnknownError,
-    MintByICP,
+    FetchRateFailed,
+    NotifyDfxFailed,
+    UnexpectedCyclesResponse,
     AmountTooSmall,
 }
 
