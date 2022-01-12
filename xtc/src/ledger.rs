@@ -11,7 +11,6 @@ use crate::utils;
 use cycles_minting_canister::IcpXdrConversionRateCertifiedResponse;
 use dfn_core::api::call_with_cleanup;
 use dfn_protobuf::protobuf;
-use ic_cdk::api::{call::call, caller};
 use ic_kit::candid::{CandidType, Int, Nat};
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context, Principal};
