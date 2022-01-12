@@ -453,7 +453,7 @@ pub async fn mint_by_icp(block_height: BlockHeight) -> TxReceipt {
         Err(_) => return Err(TxError::LedgerTrap),
     };
 
-    // track `user transfer block` that map to `canister burn block`
+    // track `user transferred block` that map to `canister burned block`
     ic.get_mut::<UsedMapBlocks>()
         .insert(block_height, new_block_height);
 
