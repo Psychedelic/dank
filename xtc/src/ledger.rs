@@ -322,17 +322,20 @@ pub type UsedMapBlocks = HashMap<BlockHeight, BlockHeight>;
 
 #[query(name = "getBlockUsed")]
 fn get_block_used() -> &'static HashSet<u64> {
-    ic_cdk::storage::get::<UsedBlocks>()
+    let ic = get_context();
+    ic.get::<UsedBlocks>()
 }
 
 #[query(name = "isBlockUsed")]
 fn is_block_used(block_number: BlockHeight) -> bool {
-    ic_cdk::storage::get::<UsedBlocks>().contains(&block_number)
+    let ic = get_context();
+    ic.get::<UsedBlocks>().contains(&block_number)
 }
 
 #[query]
 fn get_map_block_used(block_number: BlockHeight) -> Option<&'static BlockHeight> {
-    ic_cdk::storage::get::<UsedMapBlocks>().get(&block_number)
+    let ic = get_context();
+    ic.get::<UsedMapBlocks>().get(&block_number)
 }
 
 const ICPFEE: Tokens = Tokens::from_e8s(10000);
@@ -522,7 +525,7 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
     match result {
         CyclesResponse::ToppedUp(()) => {
             ic.get_mut::<Ledger>().deposit(&caller, cycles);
-            Ok(Nat::from(ic_kit::ic::get_mut::<HistoryBuffer>().push(
+            Ok(Nat::from(ic.get_mut::<HistoryBuffer>().push(
                 Transaction {
                     timestamp: ic.time(),
                     cycles,
