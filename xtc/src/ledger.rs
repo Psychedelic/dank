@@ -320,6 +320,21 @@ pub async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> TxRec
 pub type UsedBlocks = HashSet<BlockHeight>;
 pub type UsedMapBlocks = HashMap<BlockHeight, BlockHeight>;
 
+#[query(name = "getBlockUsed")]
+fn get_block_used() -> &'static HashSet<u64> {
+    ic_cdk::storage::get::<UsedBlocks>()
+}
+
+#[query(name = "isBlockUsed")]
+fn is_block_used(block_number: BlockHeight) -> bool {
+    ic_cdk::storage::get::<UsedBlocks>().contains(&block_number)
+}
+
+#[query]
+fn get_map_block_used(block_number: BlockHeight) -> Option<&'static BlockHeight> {
+    ic_cdk::storage::get::<UsedMapBlocks>().get(&block_number)
+}
+
 const ICPFEE: Tokens = Tokens::from_e8s(10000);
 const MEMO_TOP_UP_CANISTER: u64 = 1347768404_u64;
 const LEDGER_CANISTER_ID: CanisterId = CanisterId::from_u64(2);
