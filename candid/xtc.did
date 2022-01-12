@@ -189,7 +189,7 @@ service : {
    mint: (principal, nat) -> (MintResult);
    ////////// END ERC-20 //////////
 
-   mint_by_icp: (nat64) -> (TxReceipt);
+   mint_by_icp: (opt vec nat8, nat64) -> (TxReceipt);
 
     burn: (record { canister_id: principal; amount: nat64 }) -> (BurnResult);
     balance: (opt principal) -> (amount: nat64);

@@ -325,7 +325,7 @@ const MEMO_TOP_UP_CANISTER: u64 = 1347768404_u64;
 const LEDGER_CANISTER_ID: CanisterId = CanisterId::from_u64(2);
 
 #[update]
-pub async fn mint_by_icp(block_height: BlockHeight) -> TxReceipt {
+pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHeight) -> TxReceipt {
     IsShutDown::guard();
 
     let ic = get_context();
@@ -392,7 +392,7 @@ pub async fn mint_by_icp(block_height: BlockHeight) -> TxReceipt {
         return Err(TxError::BlockUsed);
     }
 
-    let caller_account = AccountIdentifier::new(ic_types::PrincipalId::from(caller), None);
+    let caller_account = AccountIdentifier::new(ic_types::PrincipalId::from(caller), sub_account);
     let xtc_account = AccountIdentifier::new(ic_types::PrincipalId::from(ic.id()), None);
 
     if caller_account != from {
