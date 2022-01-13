@@ -15,7 +15,7 @@ use dfn_core::api::call_with_cleanup;
 use dfn_protobuf::protobuf;
 use ic_kit::candid::{CandidType, Int, Nat};
 use ic_kit::macros::*;
-use ic_kit::{get_context, Context, Principal};
+use ic_kit::{get_context, ic, ic::call, Context, Principal};
 use ic_types::{CanisterId, PrincipalId};
 use ledger_canister::{
     account_identifier::{AccountIdentifier, Subaccount},
@@ -321,20 +321,17 @@ pub type UsedMapBlocks = HashMap<BlockHeight, BlockHeight>;
 
 #[query(name = "getBlockUsed")]
 fn get_block_used() -> &'static HashSet<u64> {
-    let ic = get_context();
-    ic.get::<UsedBlocks>()
+    ic::get::<UsedBlocks>()
 }
 
 #[query(name = "isBlockUsed")]
 fn is_block_used(block_number: BlockHeight) -> bool {
-    let ic = get_context();
-    ic.get::<UsedBlocks>().contains(&block_number)
+    ic::get::<UsedBlocks>().contains(&block_number)
 }
 
 #[query]
 fn get_map_block_used(block_number: BlockHeight) -> Option<&'static BlockHeight> {
-    let ic = get_context();
-    ic.get::<UsedMapBlocks>().get(&block_number)
+    ic::get::<UsedMapBlocks>().get(&block_number)
 }
 
 const ICPFEE: Tokens = Tokens::from_e8s(10000);
@@ -345,8 +342,7 @@ const LEDGER_CANISTER_ID: CanisterId = CanisterId::from_u64(2);
 pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHeight) -> TxReceipt {
     IsShutDown::guard();
 
-    let ic = get_context();
-    let caller = ic.caller();
+    let caller = ic::caller();
 
     crate::progress().await;
 
@@ -402,7 +398,7 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
         }
     };
 
-    let used_blocks = ic.get_mut::<UsedBlocks>();
+    let used_blocks = ic::get_mut::<UsedBlocks>();
 
     // guard
     if !used_blocks.insert(block_height) {
@@ -410,7 +406,7 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
     }
 
     let caller_account = AccountIdentifier::new(ic_types::PrincipalId::from(caller), sub_account);
-    let xtc_account = AccountIdentifier::new(ic_types::PrincipalId::from(ic.id()), None);
+    let xtc_account = AccountIdentifier::new(ic_types::PrincipalId::from(ic::id()), None);
 
     if caller_account != from {
         used_blocks.remove(&block_height);
@@ -438,18 +434,17 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
 
     // ====================================================
     // check xtc fee
-    let rate = ic
-        .call::<_, (IcpXdrConversionRateCertifiedResponse,), _>(
-            cycles_minting_canister,
-            "get_icp_xdr_conversion_rate",
-            (),
-        )
-        .await
-        .map_err(|_| {
-            used_blocks.remove(&block_height);
-            TxError::FetchRateFailed
-        })?
-        .0;
+    let rate = call::<_, (IcpXdrConversionRateCertifiedResponse,), _>(
+        cycles_minting_canister,
+        "get_icp_xdr_conversion_rate",
+        (),
+    )
+    .await
+    .map_err(|_| {
+        used_blocks.remove(&block_height);
+        TxError::FetchRateFailed
+    })?
+    .0;
 
     let cycles: u64 = (TokensToCycles {
         xdr_permyriad_per_icp: rate.data.xdr_permyriad_per_icp,
@@ -470,23 +465,22 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
 
     // ====================================================
     // Burn
-    let result: Result<(u64,), _> = ic
-        .call(
-            Principal::from_slice(LEDGER_CANISTER_ID.as_ref()),
-            "send_dfx",
-            (SendArgs {
-                memo: Memo(MEMO_TOP_UP_CANISTER),
-                amount,
-                fee: ICPFEE,
-                from_subaccount: None,
-                to: AccountIdentifier::new(
-                    ic_types::PrincipalId::from(cycles_minting_canister),
-                    Some(Subaccount::from(&ic_types::PrincipalId::from(ic.id()))),
-                ),
-                created_at_time: None,
-            },),
-        )
-        .await;
+    let result: Result<(u64,), _> = call(
+        Principal::from_slice(LEDGER_CANISTER_ID.as_ref()),
+        "send_dfx",
+        (SendArgs {
+            memo: Memo(MEMO_TOP_UP_CANISTER),
+            amount,
+            fee: ICPFEE,
+            from_subaccount: None,
+            to: AccountIdentifier::new(
+                ic_types::PrincipalId::from(cycles_minting_canister),
+                Some(Subaccount::from(&ic_types::PrincipalId::from(ic::id()))),
+            ),
+            created_at_time: None,
+        },),
+    )
+    .await;
     let new_block_height = match result {
         Ok((new_block_height,)) => new_block_height,
         Err(_) => return Err(TxError::LedgerTrap),
@@ -494,43 +488,43 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
     // ====================================================
 
     // track `user transferred block` that map to `canister burned block`
-    ic.get_mut::<UsedMapBlocks>()
-        .insert(block_height, new_block_height);
+    ic::get_mut::<UsedMapBlocks>().insert(block_height, new_block_height);
 
     // ====================================================
     // Notify
-    let result = ic
-        .call::<_, (CyclesResponse,), _>(
-            Principal::from_slice(LEDGER_CANISTER_ID.as_ref()),
-            "notify_dfx",
-            (NotifyCanisterArgs {
-                block_height: new_block_height,
-                max_fee: ICPFEE,
-                from_subaccount: None,
-                to_canister: ic_types::CanisterId::new(ic_types::PrincipalId::from(
-                    cycles_minting_canister,
-                ))
-                .unwrap(),
-                to_subaccount: Some(Subaccount::from(&ic_types::PrincipalId::from(ic.id()))),
-            },),
-        )
-        .await
-        .map_err(|_| TxError::NotifyDfxFailed)?
-        .0;
+    let result = call::<_, (CyclesResponse,), _>(
+        Principal::from_slice(LEDGER_CANISTER_ID.as_ref()),
+        "notify_dfx",
+        (NotifyCanisterArgs {
+            block_height: new_block_height,
+            max_fee: ICPFEE,
+            from_subaccount: None,
+            to_canister: ic_types::CanisterId::new(ic_types::PrincipalId::from(
+                cycles_minting_canister,
+            ))
+            .unwrap(),
+            to_subaccount: Some(Subaccount::from(&ic_types::PrincipalId::from(ic::id()))),
+        },),
+    )
+    .await
+    .map_err(|_| TxError::NotifyDfxFailed)?
+    .0;
     // ====================================================
 
     // ====================================================
     // Credit XTC
     match result {
         CyclesResponse::ToppedUp(()) => {
-            ic.get_mut::<Ledger>().deposit(&caller, cycles);
-            Ok(Nat::from(ic.get_mut::<HistoryBuffer>().push(Transaction {
-                timestamp: ic.time(),
-                cycles,
-                fee,
-                kind: TransactionKind::Mint { to: caller },
-                status: TransactionStatus::SUCCEEDED,
-            })))
+            ic::get_mut::<Ledger>().deposit(&caller, cycles);
+            Ok(Nat::from(ic::get_mut::<HistoryBuffer>().push(
+                Transaction {
+                    timestamp: ic::time(),
+                    cycles,
+                    fee,
+                    kind: TransactionKind::Mint { to: caller },
+                    status: TransactionStatus::SUCCEEDED,
+                },
+            )))
         }
         _ => Err(TxError::UnexpectedCyclesResponse),
     }
