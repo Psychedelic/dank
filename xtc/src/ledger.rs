@@ -26,7 +26,6 @@ use ledger_canister::{
 use serde::*;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
-use std::str::FromStr;
 
 #[derive(Default)]
 pub struct Ledger {
@@ -525,15 +524,13 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
     match result {
         CyclesResponse::ToppedUp(()) => {
             ic.get_mut::<Ledger>().deposit(&caller, cycles);
-            Ok(Nat::from(ic.get_mut::<HistoryBuffer>().push(
-                Transaction {
-                    timestamp: ic.time(),
-                    cycles,
-                    fee,
-                    kind: TransactionKind::Mint { to: caller },
-                    status: TransactionStatus::SUCCEEDED,
-                },
-            )))
+            Ok(Nat::from(ic.get_mut::<HistoryBuffer>().push(Transaction {
+                timestamp: ic.time(),
+                cycles,
+                fee,
+                kind: TransactionKind::Mint { to: caller },
+                status: TransactionStatus::SUCCEEDED,
+            })))
         }
         _ => Err(TxError::UnexpectedCyclesResponse),
     }

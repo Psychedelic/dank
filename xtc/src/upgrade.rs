@@ -1,5 +1,5 @@
 use crate::history::HistoryBuffer;
-use crate::ledger::Ledger;
+use crate::ledger::{Ledger, UsedBlocks, UsedMapBlocks};
 use crate::management;
 use crate::stats::{StatsData, StatsDataV0};
 use ic_kit::candid::CandidType;
@@ -14,6 +14,8 @@ struct StableStorageV0 {
     history: HistoryArchiveV0,
     controller: Principal,
     stats: StatsDataV0,
+    used_blocks: UsedBlocks,
+    used_map_blocks: UsedMapBlocks,
 }
 
 #[derive(CandidType)]
@@ -22,6 +24,8 @@ struct StableStorageBorrowed<'h> {
     history: HistoryArchiveBorrowed<'h, 'h>,
     controller: Principal,
     stats: StatsData,
+    used_blocks: &'static UsedBlocks,
+    used_map_blocks: &'static UsedMapBlocks,
 }
 
 #[derive(CandidType, Deserialize)]
@@ -39,11 +43,16 @@ pub fn pre_upgrade() {
     let history = ic.get_mut::<HistoryBuffer>().archive();
     let controller = management::Controller::get_principal();
 
+    let used_blocks = ic.get_mut::<UsedBlocks>();
+    let used_map_blocks = ic.get_mut::<UsedMapBlocks>();
+
     let stable = StableStorageBorrowed {
         ledger,
         history,
         controller,
         stats: StatsData::get(),
+        used_blocks,
+        used_map_blocks,
     };
 
     match ic.stable_store((stable,)) {
@@ -67,4 +76,6 @@ pub fn post_upgrade() {
     ic.get_mut::<HistoryBuffer>().load(stable.history.into());
     management::Controller::load(stable.controller);
     StatsData::load(stable.stats.into());
+    *(ic.get_mut::<UsedBlocks>()) = stable.used_blocks;
+    *(ic.get_mut::<UsedMapBlocks>()) = stable.used_map_blocks;
 }

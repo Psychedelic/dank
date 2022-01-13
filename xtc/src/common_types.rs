@@ -45,7 +45,7 @@ pub enum TxError {
     NotifyDfxFailed,
     UnexpectedCyclesResponse,
     AmountTooSmall,
-    InsufficientXTCFee
+    InsufficientXTCFee,
 }
 
 pub type TxReceipt = Result<Nat, TxError>;
