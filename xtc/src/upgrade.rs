@@ -4,7 +4,7 @@ use crate::management;
 use crate::stats::{StatsData, StatsDataV0};
 use ic_kit::candid::CandidType;
 use ic_kit::macros::*;
-use ic_kit::{get_context, Context, Principal};
+use ic_kit::{ic, Context, Principal};
 use serde::Deserialize;
 use xtc_history::data::{HistoryArchive, HistoryArchiveBorrowed, HistoryArchiveV0};
 
@@ -38,13 +38,12 @@ struct StableStorage {
 
 #[pre_upgrade]
 pub fn pre_upgrade() {
-    let ic = get_context();
-    let ledger = ic.get_mut::<Ledger>().archive();
-    let history = ic.get_mut::<HistoryBuffer>().archive();
+    let ledger = ic::get_mut::<Ledger>().archive();
+    let history = ic::get_mut::<HistoryBuffer>().archive();
     let controller = management::Controller::get_principal();
 
-    let used_blocks = ic.get_mut::<UsedBlocks>();
-    let used_map_blocks = ic.get_mut::<UsedMapBlocks>();
+    let used_blocks = ic::get_mut::<UsedBlocks>();
+    let used_map_blocks = ic::get_mut::<UsedMapBlocks>();
 
     let stable = StableStorageBorrowed {
         ledger,
@@ -55,7 +54,7 @@ pub fn pre_upgrade() {
         used_map_blocks,
     };
 
-    match ic.stable_store((stable,)) {
+    match ic::stable_store((stable,)) {
         Ok(_) => (),
         Err(candid_err) => {
             panic!(
@@ -68,14 +67,12 @@ pub fn pre_upgrade() {
 
 #[post_upgrade]
 pub fn post_upgrade() {
-    let ic = get_context();
-    let (stable,) = ic
-        .stable_restore::<(StableStorageV0,)>()
-        .expect("Failed to read from stable storage.");
-    ic.get_mut::<Ledger>().load(stable.ledger);
-    ic.get_mut::<HistoryBuffer>().load(stable.history.into());
+    let (stable,) =
+        ic::stable_restore::<(StableStorageV0,)>().expect("Failed to read from stable storage.");
+    ic::get_mut::<Ledger>().load(stable.ledger);
+    ic::get_mut::<HistoryBuffer>().load(stable.history.into());
     management::Controller::load(stable.controller);
     StatsData::load(stable.stats.into());
-    *(ic.get_mut::<UsedBlocks>()) = stable.used_blocks;
-    *(ic.get_mut::<UsedMapBlocks>()) = stable.used_map_blocks;
+    ic::store::<UsedBlocks>(stable.used_blocks);
+    ic::store::<UsedMapBlocks>(stable.used_map_blocks);
 }
