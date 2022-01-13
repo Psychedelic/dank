@@ -346,45 +346,28 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
 
     crate::progress().await;
 
-    let response: Result<BlockRes, (Option<i32>, String)> =
-        call_with_cleanup(LEDGER_CANISTER_ID, "block_pb", protobuf, block_height).await;
-    let encode_block = match response {
-        Ok(BlockRes(res)) => match res {
-            Some(result_encode_block) => match result_encode_block {
-                Ok(encode_block) => encode_block,
-                Err(e) => {
-                    let storage = match Principal::from_text(e.to_string()) {
-                        Ok(p) => p,
-                        Err(_) => return Err(TxError::Other),
-                    };
-                    let storage_canister = match CanisterId::new(PrincipalId::from(storage)) {
-                        Ok(c) => c,
-                        Err(_) => return Err(TxError::Other),
-                    };
-                    let response: Result<BlockRes, (Option<i32>, String)> =
-                        call_with_cleanup(storage_canister, "get_block_pb", protobuf, block_height)
-                            .await;
-                    match response {
-                        Ok(BlockRes(res)) => match res {
-                            Some(result_encode_block) => match result_encode_block {
-                                Ok(encode_block) => encode_block,
-                                Err(_) => return Err(TxError::Other),
-                            },
-                            None => return Err(TxError::Other),
-                        },
-                        Err(_) => return Err(TxError::Other),
-                    }
-                }
-            },
-            None => return Err(TxError::Other),
-        },
-        Err(_) => return Err(TxError::Other),
-    };
+    let BlockRes(block_response) =
+        call_with_cleanup(LEDGER_CANISTER_ID, "block_pb", protobuf, block_height)
+            .await
+            .map_err(|_| TxError::Other)?;
 
-    let block = match encode_block.decode() {
-        Ok(block) => block,
-        Err(_) => return Err(TxError::Other),
-    };
+    let block = match block_response.ok_or(TxError::Other)? {
+        Ok(encode_block) => encode_block,
+        Err(e) => {
+            let storage = Principal::from_text(e.to_string()).map_err(|_| TxError::Other)?;
+            let storage_canister =
+                CanisterId::new(PrincipalId::from(storage)).map_err(|_| TxError::Other)?;
+            let BlockRes(block_response) =
+                call_with_cleanup(storage_canister, "get_block_pb", protobuf, block_height)
+                    .await
+                    .map_err(|_| TxError::Other)?;
+            block_response
+                .ok_or(TxError::Other)?
+                .map_err(|_| TxError::Other)?
+        }
+    }
+    .decode()
+    .map_err(|_| TxError::Other)?;
 
     let (from, to, amount) = match block.transaction.operation {
         Operate::Transfer {
@@ -465,7 +448,7 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
 
     // ====================================================
     // Burn
-    let result: Result<(u64,), _> = call(
+    let new_block_height = call::<_, (u64,), _>(
         Principal::from_slice(LEDGER_CANISTER_ID.as_ref()),
         "send_dfx",
         (SendArgs {
@@ -480,11 +463,9 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
             created_at_time: None,
         },),
     )
-    .await;
-    let new_block_height = match result {
-        Ok((new_block_height,)) => new_block_height,
-        Err(_) => return Err(TxError::LedgerTrap),
-    };
+    .await
+    .map_err(|_| TxError::LedgerTrap)?
+    .0;
     // ====================================================
 
     // track `user transferred block` that map to `canister burned block`
