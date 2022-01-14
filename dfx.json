@@ -8,6 +8,12 @@
       "wasm": "target/wasm32-unknown-unknown/release/xtc-rel-opt.wasm",
       "type": "custom"
     },
+    "xtc_test": {
+      "build": "node build.js",
+      "candid": "candid/xtc.did",
+      "wasm": "target/wasm32-unknown-unknown/release/xtc-rel-opt.wasm",
+      "type": "custom"
+    },
     "piggy-bank": {
       "build": "cargo build --target wasm32-unknown-unknown --release --package piggy-bank",
       "candid": "candid/piggy-bank.did",

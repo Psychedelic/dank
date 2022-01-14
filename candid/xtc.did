@@ -46,7 +46,11 @@ type TxError = variant {
   ErrorTo;
   Other;
   BlockUsed;
+  FetchRateFailed;
+  NotifyDfxFailed;
+  UnexpectedCyclesResponse;
   AmountTooSmall;
+  InsufficientXTCFee;
 };
 type TxReceipt = variant { Ok : nat; Err : TxError };
 
@@ -184,7 +188,12 @@ service : {
    transfer: (principal, nat) -> (TxReceipt);
    transferFrom: (principal, principal, nat) -> (TxReceipt);
    mint: (principal, nat) -> (MintResult);
+   isBlockUsed : (nat64) -> (bool) query;
+   getBlockUsed : () -> (vec nat64) query;
    ////////// END ERC-20 //////////
+
+    get_map_block_used: (nat64) -> (opt nat64) query; // ICP burned block
+    mint_by_icp: (opt vec nat8, nat64) -> (TxReceipt);
 
     burn: (record { canister_id: principal; amount: nat64 }) -> (BurnResult);
     balance: (opt principal) -> (amount: nat64);
