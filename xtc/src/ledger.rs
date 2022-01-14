@@ -464,7 +464,10 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
         },),
     )
     .await
-    .map_err(|_| TxError::LedgerTrap)?
+    .map_err(|_| {
+        used_blocks.remove(&block_height);
+        TxError::LedgerTrap
+    })?
     .0;
     // ====================================================
 
