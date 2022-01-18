@@ -56,6 +56,26 @@ const convertToSerializableTransaction = (transactionResponse) => {
     return transactionResponse;
   }
 
+  if (transactionResponse.kind.Approve) {
+    transactionResponse.kind.Approve.to =
+      transactionResponse.kind.Approve.to.toText();
+    transactionResponse.kind.Approve.from =
+      transactionResponse.kind.Approve.from.toText();
+
+    return transactionResponse;
+  }
+  
+  if (transactionResponse.kind.TransferFrom) {
+    transactionResponse.kind.TransferFrom.to =
+      transactionResponse.kind.TransferFrom.to.toText();
+    transactionResponse.kind.TransferFrom.from =
+      transactionResponse.kind.TransferFrom.from.toText();
+    transactionResponse.kind.TransferFrom.caller =
+      transactionResponse.kind.TransferFrom.caller.toText();
+
+    return transactionResponse;
+  }
+
   throw new Error(
     `Unknown transaction kind - ${JSON.stringify(transactionResponse.kind)}`
   );
@@ -123,6 +143,31 @@ const convertFromSerializableTransaction = (serializableTransaction) => {
     );
     serializableTransaction.kind.CanisterCalled.from = Principal.fromText(
       serializableTransaction.kind.CanisterCalled.from
+    );
+
+    return serializableTransaction;
+  }
+
+  if (serializableTransaction.kind.Approve) {
+    serializableTransaction.kind.Approve.to = Principal.fromText(
+      serializableTransaction.kind.Approve.to
+    );
+    serializableTransaction.kind.Approve.from = Principal.fromText(
+      serializableTransaction.kind.Approve.from
+    );
+
+    return serializableTransaction;
+  }
+
+  if (serializableTransaction.kind.TransferFrom) {
+    serializableTransaction.kind.TransferFrom.to = Principal.fromText(
+      serializableTransaction.kind.TransferFrom.to
+    );
+    serializableTransaction.kind.TransferFrom.from = Principal.fromText(
+      serializableTransaction.kind.TransferFrom.from
+    );
+    serializableTransaction.kind.TransferFrom.caller = Principal.fromText(
+      serializableTransaction.kind.TransferFrom.caller
     );
 
     return serializableTransaction;
