@@ -337,6 +337,7 @@ fn get_map_block_used(block_number: BlockHeight) -> Option<&'static BlockHeight>
 const ICPFEE: Tokens = Tokens::from_e8s(10000);
 const MEMO_TOP_UP_CANISTER: u64 = 1347768404_u64;
 const LEDGER_CANISTER_ID: CanisterId = CanisterId::from_u64(2);
+const MAX_RETRY: u8 = 5;
 
 #[update]
 pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHeight) -> TxReceipt {
@@ -477,7 +478,8 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
     // ====================================================
     // Notify - Retry until successful
     // https://github.com/dfinity/sdk/pull/1973
-    let result = loop {
+    let mut result: Option<CyclesResponse> = None;
+    for _ in (0..MAX_RETRY) {
         match call::<_, (CyclesResponse,), _>(
             Principal::from_slice(LEDGER_CANISTER_ID.as_ref()),
             "notify_dfx",
@@ -494,10 +496,14 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
         )
         .await
         {
-            Ok(result) => break result.0,
+            Ok(cycles_response) => {
+                result = Some(cycles_response.0);
+                break;
+            }
             Err(_) => continue,
         }
-    };
+    }
+    let result = result.ok_or(TxError::NotifyDfxFailed)?;
     // ====================================================
 
     // ====================================================
