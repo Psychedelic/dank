@@ -475,24 +475,29 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
     ic::get_mut::<UsedMapBlocks>().insert(block_height, new_block_height);
 
     // ====================================================
-    // Notify
-    let result = call::<_, (CyclesResponse,), _>(
-        Principal::from_slice(LEDGER_CANISTER_ID.as_ref()),
-        "notify_dfx",
-        (NotifyCanisterArgs {
-            block_height: new_block_height,
-            max_fee: ICPFEE,
-            from_subaccount: None,
-            to_canister: ic_types::CanisterId::new(ic_types::PrincipalId::from(
-                cycles_minting_canister,
-            ))
-            .unwrap(),
-            to_subaccount: Some(Subaccount::from(&ic_types::PrincipalId::from(ic::id()))),
-        },),
-    )
-    .await
-    .map_err(|_| TxError::NotifyDfxFailed)?
-    .0;
+    // Notify - Retry until successful
+    // https://github.com/dfinity/sdk/pull/1973
+    let result = loop {
+        match call::<_, (CyclesResponse,), _>(
+            Principal::from_slice(LEDGER_CANISTER_ID.as_ref()),
+            "notify_dfx",
+            (NotifyCanisterArgs {
+                block_height: new_block_height,
+                max_fee: ICPFEE,
+                from_subaccount: None,
+                to_canister: ic_types::CanisterId::new(ic_types::PrincipalId::from(
+                    cycles_minting_canister,
+                ))
+                .unwrap(),
+                to_subaccount: Some(Subaccount::from(&ic_types::PrincipalId::from(ic::id()))),
+            },),
+        )
+        .await
+        {
+            Ok(result) => break result.0,
+            Err(_) => continue,
+        }
+    };
     // ====================================================
 
     // ====================================================
