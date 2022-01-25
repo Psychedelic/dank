@@ -337,15 +337,9 @@ fn get_map_block_used(block_number: BlockHeight) -> Option<&'static BlockHeight>
 const ICPFEE: Tokens = Tokens::from_e8s(10000);
 const MEMO_TOP_UP_CANISTER: u64 = 1347768404_u64;
 const LEDGER_CANISTER_ID: CanisterId = CanisterId::from_u64(2);
+const MAX_RETRY: u8 = 5;
 
-#[update]
-pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHeight) -> TxReceipt {
-    IsShutDown::guard();
-
-    let caller = ic::caller();
-
-    crate::progress().await;
-
+async fn get_block_info(block_height: BlockHeight) -> Result<(AccountIdentifier,AccountIdentifier,Tokens), TxError> {
     let BlockRes(block_response) =
         call_with_cleanup(LEDGER_CANISTER_ID, "block_pb", protobuf, block_height)
             .await
@@ -369,17 +363,28 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
     .decode()
     .map_err(|_| TxError::Other)?;
 
-    let (from, to, amount) = match block.transaction.operation {
+    match block.transaction.operation {
         Operate::Transfer {
             from,
             to,
             amount,
             fee: _,
-        } => (from, to, amount),
+        } => Ok((from, to, amount)),
         _ => {
             return Err(TxError::ErrorOperationStyle);
         }
-    };
+    }
+}
+
+#[update]
+pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHeight) -> TxReceipt {
+    IsShutDown::guard();
+
+    let caller = ic::caller();
+
+    crate::progress().await;
+
+    let (from, to, amount) = get_block_info(block_height).await?;
 
     let used_blocks = ic::get_mut::<UsedBlocks>();
 
@@ -475,24 +480,34 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
     ic::get_mut::<UsedMapBlocks>().insert(block_height, new_block_height);
 
     // ====================================================
-    // Notify
-    let result = call::<_, (CyclesResponse,), _>(
-        Principal::from_slice(LEDGER_CANISTER_ID.as_ref()),
-        "notify_dfx",
-        (NotifyCanisterArgs {
-            block_height: new_block_height,
-            max_fee: ICPFEE,
-            from_subaccount: None,
-            to_canister: ic_types::CanisterId::new(ic_types::PrincipalId::from(
-                cycles_minting_canister,
-            ))
-            .unwrap(),
-            to_subaccount: Some(Subaccount::from(&ic_types::PrincipalId::from(ic::id()))),
-        },),
-    )
-    .await
-    .map_err(|_| TxError::NotifyDfxFailed)?
-    .0;
+    // Notify - Retry until successful
+    // https://github.com/dfinity/sdk/pull/1973
+    let mut result: Option<CyclesResponse> = None;
+    for _ in (0..MAX_RETRY) {
+        match call::<_, (CyclesResponse,), _>(
+            Principal::from_slice(LEDGER_CANISTER_ID.as_ref()),
+            "notify_dfx",
+            (NotifyCanisterArgs {
+                block_height: new_block_height,
+                max_fee: ICPFEE,
+                from_subaccount: None,
+                to_canister: ic_types::CanisterId::new(ic_types::PrincipalId::from(
+                    cycles_minting_canister,
+                ))
+                .unwrap(),
+                to_subaccount: Some(Subaccount::from(&ic_types::PrincipalId::from(ic::id()))),
+            },),
+        )
+        .await
+        {
+            Ok(cycles_response) => {
+                result = Some(cycles_response.0);
+                break;
+            }
+            Err(_) => continue,
+        }
+    }
+    let result = result.ok_or(TxError::NotifyDfxFailed)?;
     // ====================================================
 
     // ====================================================
