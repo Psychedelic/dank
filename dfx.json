@@ -14,6 +14,18 @@
       "wasm": "target/wasm32-unknown-unknown/release/xtc-rel-opt.wasm",
       "type": "custom"
     },
+    "sdr": {
+      "build": "node buildsdr.js",
+      "candid": "candid/sdr.did",
+      "wasm": "target/wasm32-unknown-unknown/release/sdr-rel-opt.wasm",
+      "type": "custom"
+    },
+    "sdr_test": {
+      "build": "node buildsdr.js",
+      "candid": "candid/sdr.did",
+      "wasm": "target/wasm32-unknown-unknown/release/sdr-rel-opt.wasm",
+      "type": "custom"
+    },
     "piggy-bank": {
       "build": "cargo build --target wasm32-unknown-unknown --release --package piggy-bank",
       "candid": "candid/piggy-bank.did",
