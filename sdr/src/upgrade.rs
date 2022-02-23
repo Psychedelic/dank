@@ -5,8 +5,8 @@ use crate::stats::{StatsData, StatsDataV0};
 use ic_kit::candid::CandidType;
 use ic_kit::macros::*;
 use ic_kit::{ic, Context, Principal};
-use serde::Deserialize;
 use sdr_history::data::{HistoryArchive, HistoryArchiveBorrowed, HistoryArchiveV0};
+use serde::Deserialize;
 
 #[derive(CandidType, Deserialize)]
 struct StableStorageV0 {

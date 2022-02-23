@@ -4,8 +4,8 @@ use ic_kit::{
     candid::{CandidType, Deserialize, Int, Nat},
     Principal,
 };
-use std::convert::{TryFrom, TryInto};
 use sdr_history_common::types::*;
+use std::convert::{TryFrom, TryInto};
 
 type Time = Int;
 

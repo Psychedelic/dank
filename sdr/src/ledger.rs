@@ -13,8 +13,9 @@ use cycles_minting_canister::{
 };
 use dfn_core::api::call_with_cleanup;
 use dfn_protobuf::protobuf;
-use ic_kit::candid::{CandidType, Int, Nat};
+use ic_kit::candid::{candid_method, CandidType, Int, Nat};
 use ic_kit::macros::*;
+
 use ic_kit::{get_context, ic, ic::call, Context, Principal};
 use ic_types::{CanisterId, PrincipalId};
 use ledger_canister::{
@@ -206,17 +207,20 @@ impl Ledger {
 //////////////////// BEGIN OF ERC-20 ///////////////////////
 
 #[query(name=balanceOf)]
+#[candid_method(query, rename = "balanceOf")]
 pub async fn balance_of(account: Principal) -> Nat {
     let ledger = ic_kit::get_context().get::<Ledger>();
     Nat::from(ledger.balance(&account))
 }
 
 #[query]
+#[candid_method(query)]
 pub async fn allowance(from: Principal, to: Principal) -> Nat {
     return get_context().get::<Ledger>().allowance(&from, &to).into();
 }
 
 #[update]
+#[candid_method(update)]
 pub async fn approve(to: Principal, amount: Nat) -> TxReceipt {
     IsShutDown::guard();
     use ic_cdk::export::candid;
@@ -248,6 +252,7 @@ pub async fn approve(to: Principal, amount: Nat) -> TxReceipt {
 }
 
 #[update(name=transferErc20)]
+#[candid_method(update, rename = "transferErc20")]
 pub async fn transfer_erc20(to: Principal, amount: Nat) -> TxReceiptLegacy {
     transfer(to, amount).await.map_err(|err| match err {
         TxError::InsufficientAllowance => TxErrorLegacy::InsufficientAllowance,
@@ -256,6 +261,7 @@ pub async fn transfer_erc20(to: Principal, amount: Nat) -> TxReceiptLegacy {
 }
 
 #[update]
+#[candid_method(update)]
 pub async fn transfer(to: Principal, amount: Nat) -> TxReceipt {
     IsShutDown::guard();
 
@@ -286,6 +292,7 @@ pub async fn transfer(to: Principal, amount: Nat) -> TxReceipt {
 }
 
 #[update(name=transferFrom)]
+#[candid_method(update, rename = "transferFrom")]
 pub async fn transfer_from(from: Principal, to: Principal, amount: Nat) -> TxReceipt {
     IsShutDown::guard();
 
@@ -320,16 +327,19 @@ pub type UsedBlocks = HashSet<BlockHeight>;
 pub type UsedMapBlocks = HashMap<BlockHeight, BlockHeight>;
 
 #[query(name = "getBlockUsed")]
+#[candid_method(query, rename = "getBlockUsed")]
 fn get_block_used() -> &'static HashSet<u64> {
     ic::get::<UsedBlocks>()
 }
 
 #[query(name = "isBlockUsed")]
+#[candid_method(query, rename = "isBlockUsed")]
 fn is_block_used(block_number: BlockHeight) -> bool {
     ic::get::<UsedBlocks>().contains(&block_number)
 }
 
 #[query]
+#[candid_method(query)]
 fn get_map_block_used(block_number: BlockHeight) -> Option<&'static BlockHeight> {
     ic::get::<UsedMapBlocks>().get(&block_number)
 }
@@ -379,6 +389,7 @@ async fn get_block_info(
 }
 
 #[update]
+#[candid_method(update)]
 pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHeight) -> TxReceipt {
     IsShutDown::guard();
 
@@ -533,6 +544,7 @@ pub async fn mint_by_icp(sub_account: Option<Subaccount>, block_height: BlockHei
 }
 
 #[update]
+#[candid_method(update)]
 pub async fn mint_by_icp_recover(
     sub_account: Option<Subaccount>,
     block_height: BlockHeight,
@@ -697,6 +709,7 @@ pub enum MintError {
 }
 
 #[update]
+#[candid_method(update)]
 pub async fn mint(to: Principal, _amount: Nat) -> TxReceipt {
     IsShutDown::guard();
 
@@ -745,6 +758,7 @@ pub enum BurnError {
 }
 
 #[update]
+#[candid_method(update)]
 pub async fn burn(args: BurnArguments) -> Result<TransactionId, BurnError> {
     IsShutDown::guard();
 
@@ -1011,6 +1025,7 @@ mod tests {
 }
 
 #[update]
+#[candid_method(update)]
 pub async fn balance(account: Option<Principal>) -> u64 {
     let ic = get_context();
     let caller = ic.caller();

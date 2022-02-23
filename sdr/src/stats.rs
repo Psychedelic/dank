@@ -1,4 +1,5 @@
 use crate::history::HistoryBuffer;
+use ic_kit::candid::candid_method;
 use ic_kit::candid::{CandidType, Nat};
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context};
@@ -119,16 +120,19 @@ impl StatsData {
 }
 
 #[query]
+#[candid_method(query)]
 fn stats() -> StatsData {
     StatsData::get()
 }
 
 #[query(name = "totalSupply")]
+#[candid_method(query, rename = "totalSupply")]
 fn total_supply() -> Nat {
     StatsData::get().supply
 }
 
 #[query(name = "historySize")]
+#[candid_method(query, rename = "historySize")]
 fn history_size() -> Nat {
     let stats_data = StatsData::get();
     Nat::from(

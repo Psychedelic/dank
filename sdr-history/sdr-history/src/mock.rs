@@ -1,8 +1,8 @@
 use crate::backend::*;
-use std::collections::BTreeMap;
-use std::sync::Mutex;
 use sdr_history_common::bucket::*;
 use sdr_history_common::types::*;
+use std::collections::BTreeMap;
+use std::sync::Mutex;
 
 const MOCK_BUCKET_CAPACITY: usize = 50;
 

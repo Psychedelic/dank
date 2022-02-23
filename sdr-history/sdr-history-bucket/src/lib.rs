@@ -1,9 +1,9 @@
 use ic_cdk::export::candid::{CandidType, Principal};
 use ic_cdk::*;
 use ic_cdk_macros::*;
-use serde::Deserialize;
 use sdr_history_common::bucket::*;
 use sdr_history_common::types::*;
+use serde::Deserialize;
 
 pub struct Data {
     bucket: BucketData,

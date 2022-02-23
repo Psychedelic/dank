@@ -1,9 +1,9 @@
 use crate::backend::Backend;
 use ic_cdk::export::candid::{CandidType, Principal};
-use serde::Deserialize;
-use std::convert::From;
 use sdr_history_common::bucket::*;
 use sdr_history_common::types::*;
+use serde::Deserialize;
+use std::convert::From;
 
 /// All of the data inside the main canister's history. This structure combines a bucket to manage
 /// the events living in the main canister with a mapping of all the buckets created to provide

@@ -1,3 +1,4 @@
+use ic_kit::candid::candid_method;
 use ic_kit::macros::*;
 use ic_kit::{get_context, Context, Principal};
 
@@ -65,6 +66,7 @@ impl IsShutDown {
 }
 
 #[update]
+#[candid_method(update)]
 fn halt() {
     let ic = get_context();
 
@@ -76,6 +78,7 @@ fn halt() {
 }
 
 #[update]
+#[candid_method(update)]
 async fn finish_pending_tasks(limit: u32) {
     let ic = get_context();
 

@@ -5,6 +5,7 @@ use crate::fee::compute_fee;
 use crate::history::{HistoryBuffer, Transaction, TransactionKind, TransactionStatus};
 use crate::ledger::Ledger;
 use crate::management::IsShutDown;
+use ic_kit::candid::candid_method;
 use ic_kit::candid::CandidType;
 use ic_kit::interfaces::management::{
     CanisterSettings, CreateCanister, CreateCanisterArgument, WithCanisterId,
@@ -109,6 +110,7 @@ pub struct CreateCanisterArgs {
 }
 
 #[update(name = "wallet_create_canister")]
+#[candid_method(update, rename = "wallet_create_canister")]
 pub async fn create_canister(args: CreateCanisterArgs) -> Result<WithCanisterId, String> {
     IsShutDown::guard();
 
@@ -188,6 +190,7 @@ pub struct BalanceResult {
 }
 
 #[query]
+#[candid_method(query)]
 pub fn wallet_balance() -> BalanceResult {
     let ic = get_context();
     let ledger = ic.get::<Ledger>();
@@ -202,6 +205,7 @@ pub struct SendCyclesArgs {
 }
 
 #[update]
+#[candid_method(update)]
 pub async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
     IsShutDown::guard();
 
@@ -271,6 +275,7 @@ pub async fn wallet_send(args: SendCyclesArgs) -> Result<(), String> {
 }
 
 #[update]
+#[candid_method(update)]
 pub async fn wallet_create_wallet(_: CreateCanisterArgs) -> Result<WithCanisterId, String> {
     let ic = get_context();
     crate::progress().await;

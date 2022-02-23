@@ -1,14 +1,14 @@
 use crate::common_types::TxRecord;
 use crate::stats::{CountTarget, StatsData};
 use crate::utils::convert_nat_to_u64;
+use ic_kit::candid::candid_method;
 use ic_kit::{candid::Nat, get_context, macros::*, Context, Principal};
+use sdr_history::data::{HistoryArchive, HistoryArchiveBorrowed};
+use sdr_history::ic::IcBackend;
+use sdr_history::History;
+pub use sdr_history_common::types::*;
 use std::cmp::min;
 use std::convert::TryInto;
-use sdr_history::data::{HistoryArchive, HistoryArchiveBorrowed};
-use sdr_history::History;
-
-use sdr_history::ic::IcBackend;
-pub use sdr_history_common::types::*;
 
 pub struct HistoryBuffer {
     history: History,
@@ -77,6 +77,7 @@ impl HistoryBuffer {
 //////////////////// BEGIN OF ERC-20 ///////////////////////
 
 #[update(name = "getTransaction")]
+#[candid_method(update, rename = "getTransaction")]
 pub async fn get_transaction_erc20(index: Nat) -> TxRecord {
     TryInto::<TxRecord>::try_into(
         get_context()
@@ -93,6 +94,7 @@ pub async fn get_transaction_erc20(index: Nat) -> TxRecord {
 // TODO: ticking time bomb, we need to integrate the history service, as we
 // are always using the internal buffer here
 #[update(name = "getTransactions")]
+#[candid_method(update, rename = "getTransactions")]
 pub fn get_transactions(start: Nat, limit: Nat) -> Vec<TxRecord> {
     let MAX_LIMIT = Nat::from(100);
 
@@ -130,6 +132,7 @@ pub fn get_transactions(start: Nat, limit: Nat) -> Vec<TxRecord> {
 //////////////////// END OF ERC-20 ///////////////////////
 
 #[update]
+#[candid_method(update)]
 pub async fn get_transaction(id: TransactionId) -> Option<Transaction> {
     let ic = get_context();
     let res = ic.get::<HistoryBuffer>().history.get_transaction(id).await;
@@ -137,6 +140,7 @@ pub async fn get_transaction(id: TransactionId) -> Option<Transaction> {
 }
 
 #[query]
+#[candid_method(query)]
 fn events(args: EventsArgs) -> EventsConnection<'static> {
     let ic = get_context();
     let offset = args.offset;

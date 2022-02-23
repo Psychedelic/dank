@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["Parsa Ghadimi <parsa@fleek.co>"]
 edition = "2018"
 
+[[bin]]
+name = "sdr"
+path = "src/lib.rs"
+
 [dependencies]
 sdr-history = {path="../sdr-history/sdr-history"}
 sdr-history-common = {path= "../sdr-history/sdr-history-common" }
