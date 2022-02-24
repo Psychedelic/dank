@@ -72,6 +72,7 @@ fn integer_overflow_in_release_build_test() // test integer overflow in release 
 #[no_mangle]
 fn sink(_: u8) {}
 
+// cargo run --bin candid
 // When run on native this prints the candid service definition of this
 // canister, from the methods annotated with `candid_method` above.
 //

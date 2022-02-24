@@ -5,7 +5,7 @@ authors = ["Parsa Ghadimi <parsa@fleek.co>"]
 edition = "2018"
 
 [[bin]]
-name = "sdr"
+name = "candid"
 path = "src/lib.rs"
 
 [dependencies]
