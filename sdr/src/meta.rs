@@ -50,3 +50,9 @@ pub async fn decimals() -> u8 {
 fn logo() -> &'static str {
     get_metadata().logo
 }
+
+#[query]
+#[candid_method(query)]
+fn version() -> &'static str {
+    "0.0.1"
+}
