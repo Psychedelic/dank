@@ -27,6 +27,8 @@ use ic_kit::Principal;
 use ledger_canister::{BlockHeight, Subaccount, Transaction};
 
 use std::collections::HashSet;
+use std::fs::File;
+use std::io::Write;
 
 /// Perform only one pending async task, returns whether an async call was performed
 /// as the result of calling this method or not.
@@ -82,10 +84,19 @@ fn sink(_: u8) {}
 // to avoid calling `export_service`, which we need to call in the test below.
 #[cfg(not(any(test)))]
 fn main() {
-    // The line below generates did types and service definition from the
-    // methods annotated with `candid_method` above. The definition is then
-    // obtained with `__export_service()`.
-    std::print!("{}", export_candid());
+    let mut sdr_did;
+    // current path will be root directory
+    match File::create("./candid/sdr.did") {
+        Ok(file) => sdr_did = file,
+        Err(err) => {
+            println!("failed to open/create sdr.did file: {}", err);
+            return
+        }
+    }
+
+    if let Err(e) = sdr_did.write_all(export_candid().as_bytes()) {
+        println!("failed to write candid bindings to disk: {}", e);
+    }
 }
 
 // ---------------- CANDID -----------------------
