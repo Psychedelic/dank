@@ -2,16 +2,16 @@
 members = [
     "xtc",
     "piggy-bank",
-    "sdr",
+    "xdr",
 #    History
     "xtc-history/xtc-history",
     "xtc-history/xtc-history-bucket",
     "xtc-history/xtc-history-common",
     "xtc-history/e2e",
-    "sdr-history/sdr-history",
-    "sdr-history/sdr-history-bucket",
-    "sdr-history/sdr-history-common",
-    "sdr-history/e2e",
+    "xdr-history/xdr-history",
+    "xdr-history/xdr-history-bucket",
+    "xdr-history/xdr-history-common",
+    "xdr-history/e2e",
 ]
 
 [profile.release]
