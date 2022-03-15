@@ -9,7 +9,7 @@ const {
 const { Principal } = require('@dfinity/principal');
 const { Ed25519KeyIdentity } = require('@dfinity/identity');
 const fetch = require('node-fetch');
-const { idlFactory } = require('../candid/xtc');
+const { idlFactory } = require('../candid/xdr');
 
 const DANK_CANISTER_ID = 'aanaa-xaaaa-aaaah-aaeiq-cai';
 
@@ -33,12 +33,12 @@ const getActorWithIdentity = (defaultAgent, identity) => {
   return actor;
 };
 
-const setupXtc = () => {
+const setupXdr = () => {
   const defaultAgent = new HttpAgent({ host: 'https://ic0.app', fetch });
   const identity = createIdentity();
-  const xtc = getActorWithIdentity(defaultAgent, identity);
+  const xdr = getActorWithIdentity(defaultAgent, identity);
 
-  return xtc;
+  return xdr;
 };
 
-module.exports = setupXtc;
+module.exports = setupXdr;

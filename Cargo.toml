@@ -1,13 +1,8 @@
 [workspace]
 members = [
-    "xtc",
     "piggy-bank",
     "xdr",
 #    History
-    "xtc-history/xtc-history",
-    "xtc-history/xtc-history-bucket",
-    "xtc-history/xtc-history-common",
-    "xtc-history/e2e",
     "xdr-history/xdr-history",
     "xdr-history/xdr-history-bucket",
     "xdr-history/xdr-history-common",

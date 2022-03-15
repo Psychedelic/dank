@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { Principal } = require('@dfinity/principal');
-const setupXtc = require('../xtc/setupXtc');
+const setupXdr = require('../xdr/setupXdr');
 const { convertFromSerializableTransaction } = require('../utils/convert');
 const stringify = require('../utils/stringify');
 
@@ -94,7 +94,7 @@ const applyTransaction = (ledger, transaction) => {
   return ledger;
 };
 
-const saveBalances = async (xtc, principalIds = []) => {
+const saveBalances = async (xdr, principalIds = []) => {
   if (!fs.existsSync(SNAPSHOT_DIR)) {
     fs.mkdirSync(SNAPSHOT_DIR);
   }
@@ -110,7 +110,7 @@ const saveBalances = async (xtc, principalIds = []) => {
 
   for (const principalId of principalIds) {
     const principal = Principal.fromText(principalId);
-    const result = await xtc.balance([principal]);
+    const result = await xdr.balance([principal]);
 
     balances[principalId] = result;
 
@@ -172,21 +172,21 @@ const buildLedgerFromBackup = async () => {
 };
 
 const main = async () => {
-  const xtc = setupXtc();
+  const xdr = setupXdr();
 
   const ledger = await buildLedgerFromBackup();
 
   const whales = Object.entries(ledger).filter(([principalId, balance]) => balance > BigInt(100000000000000n))
 
   console.log('')
-  console.log('XTC Whales - any account with more than 100 XTC')
+  console.log('XDR Whales - any account with more than 100 XDR')
   console.log('-----------------------------------------------')
   console.log('')
   console.log(`There are currently ${whales.length} whales`)
   console.log('')
 
   for (const [principalId, balance] of whales.sort((a,b) => (a[1] < b[1]) ? 1 : ((a[1] > b[1]) ? -1 : 0))) {
-    console.log(`${balance / A_TRILLION} XTC - ${principalId}`)
+    console.log(`${balance / A_TRILLION} XDR - ${principalId}`)
   }
 
   console.log()

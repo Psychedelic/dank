@@ -4,7 +4,7 @@ const idlFactory = ({ IDL }) => {
     'InsufficientAllowance' : IDL.Null,
     'UnexpectedCyclesResponse' : IDL.Null,
     'InsufficientBalance' : IDL.Null,
-    'InsufficientXTCFee' : IDL.Null,
+    'InsufficientXDRFee' : IDL.Null,
     'ErrorOperationStyle' : IDL.Null,
     'Unauthorized' : IDL.Null,
     'LedgerTrap' : IDL.Null,

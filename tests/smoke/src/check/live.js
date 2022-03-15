@@ -1,4 +1,4 @@
-const setupXtc = require('../xtc/setupXtc');
+const setupXdr = require('../xdr/setupXdr');
 
 const validateStats = (stats) => {
   return {
@@ -6,8 +6,8 @@ const validateStats = (stats) => {
   };
 };
 
-const checkStats = async (xtc) => {
-  const stats = await xtc.stats();
+const checkStats = async (xdr) => {
+  const stats = await xdr.stats();
 
   const response = validateStats(stats);
 
@@ -21,9 +21,9 @@ const checkStats = async (xtc) => {
 };
 
 const main = async () => {
-  const xtc = setupXtc();
+  const xdr = setupXdr();
 
-  checkStats(xtc);
+  checkStats(xdr);
 };
 
 main();

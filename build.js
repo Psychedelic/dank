@@ -55,6 +55,6 @@ switch (buildType)
         target_dir = "release"
 }
 
-buildWasm('xtc-history-bucket', [...buildCommand], history_suffix, target_dir);
-buildWasm('xtc-history-e2e', [...buildCommand], history_suffix, target_dir);
-buildWasm('xtc', [...buildCommand], history_suffix, target_dir);
+buildWasm('xdr-history-bucket', [...buildCommand], history_suffix, target_dir);
+buildWasm('xdr-history-e2e', [...buildCommand], history_suffix, target_dir);
+buildWasm('xdr', [...buildCommand], history_suffix, target_dir);

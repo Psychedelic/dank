@@ -57,24 +57,24 @@ dfx deploy --network ic xdr
 
 ### Deploy
 ```
-dfx canister --network=ic --wallet $(dfx identity --network=ic get-wallet) call xtc halt
+dfx canister --network=ic --wallet $(dfx identity --network=ic get-wallet) call xdr halt
 backup again
-dfx canister --network=ic install --mode=upgrade xtc
+dfx canister --network=ic install --mode=upgrade xdr
 ```
 
 ### Smoke tets
 
 Balance
 ```
-dfx canister --network=ic call xtc  balance "(null)"
+dfx canister --network=ic call xdr  balance "(null)"
 ```
 
 Transfer
 ```
-dfx canister --network=ic --no-wallet call xtc transfer "(record { to= principal \"some-account's-principal-id\"; amount= (1000:nat64) })"
+dfx canister --network=ic --no-wallet call xdr transfer "(record { to= principal \"some-account's-principal-id\"; amount= (1000:nat64) })"
 ```
 
 Stats
 ```
-dfx canister --network=ic call xtc stats
+dfx canister --network=ic call xdr stats
 ```
