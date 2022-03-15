@@ -49,6 +49,12 @@ yarn
 yarn backup:live
 ```
 
+### First time Deploy
+```
+dfx canister --network=ic --wallet $(dfx identity --network=ic get-wallet) 
+dfx deploy --network ic xdr
+```
+
 ### Deploy
 ```
 dfx canister --network=ic --wallet $(dfx identity --network=ic get-wallet) call xtc halt

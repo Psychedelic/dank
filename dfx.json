@@ -14,28 +14,16 @@
       "wasm": "target/wasm32-unknown-unknown/release/xtc-rel-opt.wasm",
       "type": "custom"
     },
-    "sdr": {
-      "build": "node buildsdr.js",
-      "candid": "candid/sdr.did",
-      "wasm": "target/wasm32-unknown-unknown/release/sdr-rel-opt.wasm",
-      "type": "custom"
-    },
-    "sdr_test": {
-      "build": "node buildsdr.js",
-      "candid": "candid/sdr.did",
-      "wasm": "target/wasm32-unknown-unknown/release/sdr-rel-opt.wasm",
-      "type": "custom"
-    },
     "xdr": {
       "build": "node buildxdr.js",
       "candid": "candid/xdr.did",
-      "wasm": "target/wasm32-unknown-unknown/release/sdr-rel-opt.wasm",
+      "wasm": "target/wasm32-unknown-unknown/release/xdr-rel-opt.wasm",
       "type": "custom"
     },
     "xdr_test": {
       "build": "node buildxdr.js",
       "candid": "candid/xdr.did",
-      "wasm": "target/wasm32-unknown-unknown/release/sdr-rel-opt.wasm",
+      "wasm": "target/wasm32-unknown-unknown/release/xdr-rel-opt.wasm",
       "type": "custom"
     },
     "piggy-bank": {
