@@ -96,7 +96,7 @@ pub async fn get_transaction_erc20(index: Nat) -> TxRecord {
 #[update(name = "getTransactions")]
 #[candid_method(update, rename = "getTransactions")]
 pub fn get_transactions(start: Nat, limit: Nat) -> Vec<TxRecord> {
-    let MAX_LIMIT = Nat::from(100);
+    let MAX_LIMIT = Nat::from(500);
 
     if limit > MAX_LIMIT {
         ic_cdk::api::trap(&format!("limit cannot be greater than {}", MAX_LIMIT))
