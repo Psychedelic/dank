@@ -1,14 +1,5 @@
 {
   "piggy-bank": {
     "ic": "ajol4-biaaa-aaaah-aaeja-cai"
-  },
-  "sdr": {
-    "ic": "qlttm-2yaaa-aaaak-qafvq-cai"
-  },
-  "xdr": {
-    "ic": "aanaa-xaaaa-aaaah-aaeiq-cai"
-  },
-  "xdr_test": {
-    "ic": "77646-fqaaa-aaaam-qabla-cai"
   }
 }

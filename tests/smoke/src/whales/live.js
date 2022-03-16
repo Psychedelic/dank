@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { Principal } = require('@dfinity/principal');
-const setupXdr = require('../xdr/setupXdr');
+const setupSdr = require('../sdr/setupSdr');
 const { convertFromSerializableTransaction } = require('../utils/convert');
 const stringify = require('../utils/stringify');
 
@@ -94,7 +94,7 @@ const applyTransaction = (ledger, transaction) => {
   return ledger;
 };
 
-const saveBalances = async (xdr, principalIds = []) => {
+const saveBalances = async (sdr, principalIds = []) => {
   if (!fs.existsSync(SNAPSHOT_DIR)) {
     fs.mkdirSync(SNAPSHOT_DIR);
   }
@@ -110,7 +110,7 @@ const saveBalances = async (xdr, principalIds = []) => {
 
   for (const principalId of principalIds) {
     const principal = Principal.fromText(principalId);
-    const result = await xdr.balance([principal]);
+    const result = await sdr.balance([principal]);
 
     balances[principalId] = result;
 
@@ -172,21 +172,21 @@ const buildLedgerFromBackup = async () => {
 };
 
 const main = async () => {
-  const xdr = setupXdr();
+  const sdr = setupSdr();
 
   const ledger = await buildLedgerFromBackup();
 
   const whales = Object.entries(ledger).filter(([principalId, balance]) => balance > BigInt(100000000000000n))
 
   console.log('')
-  console.log('XDR Whales - any account with more than 100 XDR')
+  console.log('SDR Whales - any account with more than 100 SDR')
   console.log('-----------------------------------------------')
   console.log('')
   console.log(`There are currently ${whales.length} whales`)
   console.log('')
 
   for (const [principalId, balance] of whales.sort((a,b) => (a[1] < b[1]) ? 1 : ((a[1] > b[1]) ? -1 : 0))) {
-    console.log(`${balance / A_TRILLION} XDR - ${principalId}`)
+    console.log(`${balance / A_TRILLION} SDR - ${principalId}`)
   }
 
   console.log()

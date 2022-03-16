@@ -52,29 +52,29 @@ yarn backup:live
 ### First time Deploy
 ```
 dfx canister --network=ic --wallet $(dfx identity --network=ic get-wallet) 
-dfx deploy --network ic xdr
+dfx deploy --network ic sdr
 ```
 
 ### Deploy
 ```
-dfx canister --network=ic --wallet $(dfx identity --network=ic get-wallet) call xdr halt
+dfx canister --network=ic --wallet $(dfx identity --network=ic get-wallet) call sdr halt
 backup again
-dfx canister --network=ic install --mode=upgrade xdr
+dfx canister --network=ic install --mode=upgrade sdr
 ```
 
 ### Smoke tets
 
 Balance
 ```
-dfx canister --network=ic call xdr  balance "(null)"
+dfx canister --network=ic call sdr  balance "(null)"
 ```
 
 Transfer
 ```
-dfx canister --network=ic --no-wallet call xdr transfer "(record { to= principal \"some-account's-principal-id\"; amount= (1000:nat64) })"
+dfx canister --network=ic --no-wallet call sdr transfer "(record { to= principal \"some-account's-principal-id\"; amount= (1000:nat64) })"
 ```
 
 Stats
 ```
-dfx canister --network=ic call xdr stats
+dfx canister --network=ic call sdr stats
 ```

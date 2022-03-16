@@ -2599,6 +2599,70 @@ dependencies = [
 ]
 
 [[package]]
+name = "sdr"
+version = "0.1.0"
+dependencies = [
+ "async-std",
+ "cycles-minting-canister",
+ "derive-new",
+ "derive_builder",
+ "dfn_core",
+ "dfn_protobuf",
+ "ic-cdk",
+ "ic-kit",
+ "ic-types 0.8.0",
+ "ledger-canister",
+ "sdr-history",
+ "sdr-history-common",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
+name = "sdr-history"
+version = "0.1.0"
+dependencies = [
+ "async-std",
+ "ic-cdk",
+ "sdr-history-common",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
+name = "sdr-history-bucket"
+version = "0.1.0"
+dependencies = [
+ "ic-cdk",
+ "ic-cdk-macros",
+ "sdr-history-common",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
+name = "sdr-history-common"
+version = "0.1.0"
+dependencies = [
+ "ic-cdk",
+ "serde",
+]
+
+[[package]]
+name = "sdr-history-e2e"
+version = "0.1.0"
+dependencies = [
+ "async-std",
+ "ic-agent",
+ "ic-cdk",
+ "ic-cdk-macros",
+ "sdr-history",
+ "sdr-history-common",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
 name = "security-framework"
 version = "2.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3341,70 +3405,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0120db82e8a1e0b9fb3345a539c478767c0048d842860994d96113d5b667bd69"
 dependencies = [
  "winapi",
-]
-
-[[package]]
-name = "xdr"
-version = "0.1.0"
-dependencies = [
- "async-std",
- "cycles-minting-canister",
- "derive-new",
- "derive_builder",
- "dfn_core",
- "dfn_protobuf",
- "ic-cdk",
- "ic-kit",
- "ic-types 0.8.0",
- "ledger-canister",
- "serde",
- "serde_bytes",
- "xdr-history",
- "xdr-history-common",
-]
-
-[[package]]
-name = "xdr-history"
-version = "0.1.0"
-dependencies = [
- "async-std",
- "ic-cdk",
- "serde",
- "serde_bytes",
- "xdr-history-common",
-]
-
-[[package]]
-name = "xdr-history-bucket"
-version = "0.1.0"
-dependencies = [
- "ic-cdk",
- "ic-cdk-macros",
- "serde",
- "serde_bytes",
- "xdr-history-common",
-]
-
-[[package]]
-name = "xdr-history-common"
-version = "0.1.0"
-dependencies = [
- "ic-cdk",
- "serde",
-]
-
-[[package]]
-name = "xdr-history-e2e"
-version = "0.1.0"
-dependencies = [
- "async-std",
- "ic-agent",
- "ic-cdk",
- "ic-cdk-macros",
- "serde",
- "serde_bytes",
- "xdr-history",
- "xdr-history-common",
 ]
 
 [[package]]

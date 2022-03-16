@@ -19,44 +19,44 @@ dfx start --background --clean
 
 # Step 2. Let's deploy our canisters on IC.
 echo
-echo "${action} Deploying XDR and Piggy Bank on IC"
+echo "${action} Deploying SDR and Piggy Bank on IC"
 echo
 dfx deploy
 
 # Step 3. We get Piggy Bank's and our balance.
 echo
-echo "${action} Getting the balances of Piggy Bank and our XDR account"
+echo "${action} Getting the balances of Piggy Bank and our SDR account"
 echo
 piggyBalance=$(dfx canister call piggy-bank balance)
-xdrBalance=$(dfx canister call xdr balance "(null)")
+sdrBalance=$(dfx canister call sdr balance "(null)")
 echo "Piggy Bank's balance: $piggyBalance"
-echo "Our XDR account's balance: $xdrBalance"
+echo "Our SDR account's balance: $sdrBalance"
 
-# Step 4. We deposit some cycles to our XDR account from Piggy-Bank.
+# Step 4. We deposit some cycles to our SDR account from Piggy-Bank.
 echo
-echo "${action} Depositing 5000 cycles to our XDR account from Piggy Bank"
+echo "${action} Depositing 5000 cycles to our SDR account from Piggy Bank"
 echo
-xdrID=$(dfx canister id xdr)
-dfx canister call piggy-bank perform_mint "(record { canister= principal \"$xdrID\"; account=null; cycles=5000 })"
+sdrID=$(dfx canister id sdr)
+dfx canister call piggy-bank perform_mint "(record { canister= principal \"$sdrID\"; account=null; cycles=5000 })"
 
 echo
 piggyBalance=$(dfx canister call piggy-bank balance)
-xdrBalance=$(dfx canister call xdr balance "(null)")
+sdrBalance=$(dfx canister call sdr balance "(null)")
 echo "Piggy Bank's new balance: $piggyBalance"
-echo "Our XDR account's balance: $xdrBalance"
+echo "Our SDR account's balance: $sdrBalance"
 
-# Step 5. We withdraw some cycles from XDR.
+# Step 5. We withdraw some cycles from SDR.
 echo
-echo "${action} Withdrawing 2000 cycles from XDR to Piggy Bank"
+echo "${action} Withdrawing 2000 cycles from SDR to Piggy Bank"
 echo
 piggyID=$(dfx canister id piggy-bank)
-dfx canister call xdr burn "(record { canister_id= principal \"$piggyID\"; amount= 2000})"
+dfx canister call sdr burn "(record { canister_id= principal \"$piggyID\"; amount= 2000})"
 
 echo
 piggyBalance=$(dfx canister call piggy-bank balance)
-xdrBalance=$(dfx canister call xdr balance "(null)")
+sdrBalance=$(dfx canister call sdr balance "(null)")
 echo "Piggy Bank's new balance: $piggyBalance"
-echo "Our XDR account's balance: $xdrBalance"
+echo "Our SDR account's balance: $sdrBalance"
 
 # Step 6. We create a new identity and transfer some cycles to it.
 echo
@@ -64,13 +64,13 @@ echo "${action} Creating a new identity named steve and transferring 1000 cycles
 echo
 dfx identity new steve || true
 steveID=$(dfx --identity steve identity get-principal)
-dfx canister call xdr transfer "(record { to= principal \"$steveID\"; amount= 1000 })"
+dfx canister call sdr transfer "(record { to= principal \"$steveID\"; amount= 1000 })"
 
 echo
-steveBalance=$(dfx --identity steve canister call xdr balance "(null)")
-xdrBalance=$(dfx canister call xdr balance "(null)")
+steveBalance=$(dfx --identity steve canister call sdr balance "(null)")
+sdrBalance=$(dfx canister call sdr balance "(null)")
 echo "Steve's new balance: $steveBalance"
-echo "Our XDR account's balance: $xdrBalance"
+echo "Our SDR account's balance: $sdrBalance"
 
 
 # Now that we're done let's stop the service.

@@ -1,6 +1,6 @@
 # Smoke Tests
 
-Scripts to support checking and verifying a mainnet deploy of the XDR canister.
+Scripts to support checking and verifying a mainnet deploy of the SDR canister.
 
 ## Install
 
@@ -43,7 +43,7 @@ yarn verify:live
 
 ### Whales
 
-To determine the largest holders of XDR
+To determine the largest holders of SDR
 
 To run:
 

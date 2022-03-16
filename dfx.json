@@ -2,16 +2,16 @@
   "version": 1,
   "dfx": "0.8.4",
   "canisters": {
-    "xdr": {
-      "build": "node buildxdr.js",
-      "candid": "candid/xdr.did",
-      "wasm": "target/wasm32-unknown-unknown/release/xdr-rel-opt.wasm",
+    "sdr": {
+      "build": "node build.js",
+      "candid": "candid/sdr.did",
+      "wasm": "target/wasm32-unknown-unknown/release/sdr-rel-opt.wasm",
       "type": "custom"
     },
-    "xdr_test": {
-      "build": "node buildxdr.js",
-      "candid": "candid/xdr.did",
-      "wasm": "target/wasm32-unknown-unknown/release/xdr-rel-opt.wasm",
+    "sdr_test": {
+      "build": "node build.js",
+      "candid": "candid/sdr.did",
+      "wasm": "target/wasm32-unknown-unknown/release/sdr-rel-opt.wasm",
       "type": "custom"
     },
     "piggy-bank": {
@@ -21,9 +21,9 @@
       "type": "custom"
     },
     "history-e2e": {
-      "build": "cargo build --target wasm32-unknown-unknown --release --package xdr-history-e2e",
-      "candid": "candid/xdr-history-e2e.did",
-      "wasm": "target/wasm32-unknown-unknown/release/xdr_history_e2e-rel-opt.wasm",
+      "build": "cargo build --target wasm32-unknown-unknown --release --package sdr-history-e2e",
+      "candid": "candid/sdr-history-e2e.did",
+      "wasm": "target/wasm32-unknown-unknown/release/sdr_history_e2e-rel-opt.wasm",
       "type": "custom"
     }
   },

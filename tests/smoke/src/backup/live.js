@@ -1,12 +1,12 @@
 const fs = require('fs');
 const path = require('path');
-const setupXdr = require('../xdr/setupXdr');
+const setupSdr = require('../sdr/setupSdr');
 const { convertToSerializableTransaction } = require('../utils/convert');
 const stringify = require('../utils/stringify');
 
 const BACKUP_DIR = 'backup';
 
-const backupHistory = async (xdr) => {
+const backupHistory = async (sdr) => {
   if (!fs.existsSync(BACKUP_DIR)) {
     fs.mkdirSync(BACKUP_DIR);
   }
@@ -15,7 +15,7 @@ const backupHistory = async (xdr) => {
 
   const lastTransaction = files.length - 1;
 
-  const stats = await xdr.stats();
+  const stats = await sdr.stats();
 
   const noOfTransactions = stats.history_events;
 
@@ -23,7 +23,7 @@ const backupHistory = async (xdr) => {
     Array(Number(noOfTransactions)).keys()
   ).slice(lastTransaction + 1);
 
-  console.log(`Starting backup of Live XDR Transaction History`);
+  console.log(`Starting backup of Live SDR Transaction History`);
   console.log('');
   console.log(`Current number of transaction in history: ${noOfTransactions}`);
   if (lastTransaction > 0) {
@@ -35,7 +35,7 @@ const backupHistory = async (xdr) => {
   for (const index of transactionIds) {
     console.log(`Storing ${index} (${noOfTransactions})`);
 
-    const result = await xdr.get_transaction(index);
+    const result = await sdr.get_transaction(index);
     const transaction = convertToSerializableTransaction(result[0]);
 
     await fs.promises.writeFile(
@@ -46,9 +46,9 @@ const backupHistory = async (xdr) => {
 };
 
 const main = async () => {
-  const xdr = setupXdr();
+  const sdr = setupSdr();
 
-  await backupHistory(xdr);
+  await backupHistory(sdr);
 };
 
 main();

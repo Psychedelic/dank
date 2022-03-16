@@ -1,4 +1,4 @@
-const setupXdr = require('../xdr/setupXdr');
+const setupSdr = require('../sdr/setupSdr');
 
 const validateStats = (stats) => {
   return {
@@ -6,8 +6,8 @@ const validateStats = (stats) => {
   };
 };
 
-const checkStats = async (xdr) => {
-  const stats = await xdr.stats();
+const checkStats = async (sdr) => {
+  const stats = await sdr.stats();
 
   const response = validateStats(stats);
 
@@ -21,9 +21,9 @@ const checkStats = async (xdr) => {
 };
 
 const main = async () => {
-  const xdr = setupXdr();
+  const sdr = setupSdr();
 
-  checkStats(xdr);
+  checkStats(sdr);
 };
 
 main();

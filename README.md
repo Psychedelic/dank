@@ -1,11 +1,11 @@
 # Special Drawing Rights (SDR) Token
-[![Documentation](https://img.shields.io/badge/Documentation-2CA5E0?color=blue)](https://docs.earthwallet.io/xdr)
+[![Documentation](https://img.shields.io/badge/Documentation-2CA5E0?color=blue)](https://docs.earthwallet.io/sdr)
 [![Canister](https://img.shields.io/badge/Canister-Deployed-2CA5E0?color=success)](https://ic.rocks/principal/qlttm-2yaaa-aaaak-qafvq-cai)
 [![Discord](https://img.shields.io/badge/Discord-%237289DA.svg?style=flat&logo=discord&logoColor=white)](https://discord.gg/aemgEpMye3)
 [![Twitter](https://img.shields.io/badge/Twitter-%231DA1F2.svg?style=flat&logo=Twitter&logoColor=white)](https://twitter.com/earthwallet)
 ![License](https://img.shields.io/badge/Code-MIT%20Licence-blueviolet)
 
-The Internet Computer utilizes a stablecoin known as Special Drawing Rights ([XDR](https://www.imf.org/en/Topics/special-drawing-right)) to pay for compute, storage, and bandwidth costs of decentralized applications running on the network. 1 SDR represents 1 Trillion cycles on the Internet Computer.
+The Internet Computer utilizes a stablecoin known as Special Drawing Rights ([SDR](https://www.imf.org/en/Topics/special-drawing-right)) to pay for compute, storage, and bandwidth costs of decentralized applications running on the network. 1 SDR represents 1 Trillion cycles on the Internet Computer.
 
  may vary by usage, but can be viewed here [Cycle costs on the Internet Computer](https://smartcontracts.org/docs/developers-guide/computation-and-storage-costs.html)
 
@@ -39,7 +39,7 @@ You can deposit cycles into the SDR canister from a personal cycles wallet direc
 $ dfx canister --network=ic --wallet=$(dfx identity --network=ic get-wallet) call --with-cycles AMOUNT qlttm-2yaaa-aaaak-qafvq-cai mint "(principal \"$(dfx identity get-principal)\",0:nat)"
 ```
 
-NOTE: You can deposit cycles to another XDR balance from your identity with the same `mint` method that we used to deposit cycles to our own XDR balance. For that situation, you should change the argument to a principal ID:
+NOTE: You can deposit cycles to another SDR balance from your identity with the same `mint` method that we used to deposit cycles to our own SDR balance. For that situation, you should change the argument to a principal ID:
 
 ```bash
 $ dfx canister --network=ic --wallet=$(dfx identity --network=ic get-wallet) call --with-cycles AMOUNT qlttm-2yaaa-aaaak-qafvq-cai mint "(principal \"Some-Principal-ID\",0:nat")"
@@ -51,7 +51,7 @@ Note: This command should not require the `--wallet` flag, but we need the `--wa
 
 ### How to Deploy SDR Token:
 
-The `dfx deploy` command shows an error when deploying within a dfx project when the cycle wallet is set as the `XDR` canister. The `deploy` command successfully creates the canister, but fails when installing the wasm code (this is due to dfx assuming the controller of the new canister is the cycle wallet, not the dfx identity).
+The `dfx deploy` command shows an error when deploying within a dfx project when the cycle wallet is set as the `SDR` canister. The `deploy` command successfully creates the canister, but fails when installing the wasm code (this is due to dfx assuming the controller of the new canister is the cycle wallet, not the dfx identity).
 
 To deploy a projects canisters, instead of `dfx deploy --network=ic` separate the canister and install commands:
 

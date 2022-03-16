@@ -55,6 +55,17 @@ switch (buildType)
         target_dir = "release"
 }
 
-buildWasm('xdr-history-bucket', [...buildCommand], history_suffix, target_dir);
-buildWasm('xdr-history-e2e', [...buildCommand], history_suffix, target_dir);
-buildWasm('xdr', [...buildCommand], history_suffix, target_dir);
+buildWasm('sdr-history-bucket', [...buildCommand], history_suffix, target_dir);
+buildWasm('sdr-history-e2e', [...buildCommand], history_suffix, target_dir);
+buildWasm('sdr', [...buildCommand], history_suffix, target_dir);
+
+const generateDid = () => {
+    console.log('generateDid');
+    const exec = execSync('cargo run --bin candid');
+    console.log(exec.toString());
+    console.log('DIDs generated');
+
+}
+
+
+generateDid();

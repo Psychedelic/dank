@@ -10,7 +10,7 @@ In another tab:
 
 ```shell
 dfx identity use manual-test-1
-dfx deploy --with-cycles 48000000000000 xdr
+dfx deploy --with-cycles 48000000000000 sdr
 dfx deploy --with-cycles 12000000000000 piggy-bank
 ```
 
@@ -19,7 +19,7 @@ dfx deploy --with-cycles 12000000000000 piggy-bank
 To setup use local variables:
 
 ```shell
-xdrID=$(dfx canister id xdr)
+sdrID=$(dfx canister id sdr)
 walletId=$(dfx identity get-wallet)
 principalId=$(dfx identity get-principal)
 
@@ -31,22 +31,22 @@ dfx identity use manual-test-1
 ### Mint to your account
 
 ```shell
-# Mint into XDR based on your account, via piggy-bank
-dfx canister call piggy-bank perform_mint "(record { canister= principal \"$xdrID\"; account=null; cycles=10_000_000_000_000 })"
+# Mint into SDR based on your account, via piggy-bank
+dfx canister call piggy-bank perform_mint "(record { canister= principal \"$sdrID\"; account=null; cycles=10_000_000_000_000 })"
 
 # Check the stats
-dfx canister call xdr stats
+dfx canister call sdr stats
 # Supply should be 9_998_000_000_000
 # Mint count should be 1
 # fee should be 2_000_000_000
 # history_events should be 1
 
 # Check your balance has the cycles
-dfx canister call xdr balanceOf "principal \"$principalId\""
+dfx canister call sdr balanceOf "principal \"$principalId\""
 # shoule be (9_998_000_000_000 : nat64)
 
 # Check the transaction history
-dfx canister call xdr get_transaction "(0)"
+dfx canister call sdr get_transaction "(0)"
 
 # Something like:
 # (
@@ -63,7 +63,7 @@ dfx canister call xdr get_transaction "(0)"
 # )
 #
 # Check events
-dfx canister call xdr events "record { limit= 5: nat16 }"
+dfx canister call sdr events "record { limit= 5: nat16 }"
 
 # Should see 1 record and the correct recort
 ```
@@ -73,14 +73,14 @@ dfx canister call xdr events "record { limit= 5: nat16 }"
 For your account:
 
 ```
-dfx canister call xdr balance "(null)"
+dfx canister call sdr balance "(null)"
 # Verify number is what you expect
 ```
 
 For a non-existant account
 
 ```shell
-dfx canister call xdr balanceOf "(principal \"$secondPrincipalId\")"
+dfx canister call sdr balanceOf "(principal \"$secondPrincipalId\")"
 
 # excpect returned balance as nat64: 0
 ```
@@ -91,18 +91,18 @@ Transfer to new user
 
 ```shell
 # Check from balance before
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
-dfx canister call xdr balanceOf "(principal \"$secondPrincipalId\")"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$secondPrincipalId\")"
 
-dfx canister --no-wallet call xdr transfer "(principal \"$secondPrincipalId\", 1000:nat)"
+dfx canister --no-wallet call sdr transfer "(principal \"$secondPrincipalId\", 1000:nat)"
 
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
 # expect balance before - transfer amount (1000) - fee (2_000_000_00) = 9_995_999_999_000
 
-dfx canister call xdr balanceOf "(principal \"$secondPrincipalId\")"
+dfx canister call sdr balanceOf "(principal \"$secondPrincipalId\")"
 # expect transfer amount (1000)
 
-dfx canister call xdr stats
+dfx canister call sdr stats
 # expect supply is 9_996_000_000_000 (10TC - 2 fees)
 # expect transfer count is 1
 # expect fee to be 4_000_000_000
@@ -115,35 +115,35 @@ Transfer back to original user
 # Switch to other identity
 dfx identity use manual-test-2
 
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
-dfx canister call xdr balanceOf "(principal \"$secondPrincipalId\")"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$secondPrincipalId\")"
 
-dfx canister --no-wallet call xdr transfer "(principal \"$principalId\", 1000:nat)"
+dfx canister --no-wallet call sdr transfer "(principal \"$principalId\", 1000:nat)"
 # Insufficient balance due to fees
 
 dfx identity use manual-test-1
-dfx canister --no-wallet call xdr transfer "(principal \"$secondPrincipalId\", 2_000_000_000:nat)"
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
-dfx canister call xdr balanceOf "(principal \"$secondPrincipalId\")"
+dfx canister --no-wallet call sdr transfer "(principal \"$secondPrincipalId\", 2_000_000_000:nat)"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$secondPrincipalId\")"
 
 # Try again with fees
 dfx identity use manual-test-2
-dfx canister --no-wallet call xdr transfer "(principal \"$principalId\", 1000:nat)"
+dfx canister --no-wallet call sdr transfer "(principal \"$principalId\", 1000:nat)"
 
-dfx canister call xdr balanceOf "(principal \"$secondPrincipalId\")"
+dfx canister call sdr balanceOf "(principal \"$secondPrincipalId\")"
 # should be 0
 
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
 # should be back to 9_992_000_000_000 (10TC minus fees)
 
-dfx canister call xdr stats
+dfx canister call sdr stats
 # expect supply remains 9_992_000_000_000 (10TC minus fees)
 # expect transfer count is 3
 # expect history_events to be 4
 
-dfx canister call xdr get_transaction "(3)"
+dfx canister call sdr get_transaction "(3)"
 
-dfx canister call xdr events "record { limit= 5: nat16 }"
+dfx canister call sdr events "record { limit= 5: nat16 }"
 # should show the 3 transactions, with the last transfer as the first entry, matching
 # what you get back from get_transaction
 ```
@@ -153,10 +153,10 @@ Transfer 0 cycles should be accepted but charge a fee
 ```shell
 # as identity 1
 dfx identity use manual-test-1
-dfx canister --no-wallet call xdr transfer "(principal \"$secondPrincipalId\", 0:nat)"
+dfx canister --no-wallet call sdr transfer "(principal \"$secondPrincipalId\", 0:nat)"
 # transaction doesn't go through
 
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
 # 9_990_000_000_000 - fee taken
 ```
 
@@ -165,17 +165,17 @@ dfx canister call xdr balanceOf "(principal \"$principalId\")"
 Burn to a canister:
 
 ```shell
-# Check xdr balance before
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
+# Check sdr balance before
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
 
 # Check piggy-bank balance before
 dfx canister status piggy-bank
 
-# Burn xdr and send to piggy bank
-dfx canister call xdr burn "record { canister_id= principal \"$(dfx canister id piggy-bank)\"; amount = 1000:nat64}"
+# Burn sdr and send to piggy bank
+dfx canister call sdr burn "record { canister_id= principal \"$(dfx canister id piggy-bank)\"; amount = 1000:nat64}"
 
 # Check balance
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
 # should be amount less than before - including the fee
 
 # Chck piggy bank cycles balance
@@ -183,14 +183,14 @@ dfx canister status piggy-bank
 # Balance should be burn amount higher
 
 # Check transaction
-dfx canister call xdr get_transaction "(5)"
-dfx canister call xdr events "record { limit= 5: nat16 }"
+dfx canister call sdr get_transaction "(5)"
+dfx canister call sdr events "record { limit= 5: nat16 }"
 ```
 
 Burn cycles you don't have:
 
 ```shell
-dfx canister call xdr burn "record { canister_id= principal \"$(dfx canister id piggy-bank)\"; amount = 1_000_000_000_000_000:nat64}"
+dfx canister call sdr burn "record { canister_id= principal \"$(dfx canister id piggy-bank)\"; amount = 1_000_000_000_000_000:nat64}"
 
 # insufficient balance error
 ```
@@ -198,7 +198,7 @@ dfx canister call xdr burn "record { canister_id= principal \"$(dfx canister id 
 Burn to non-existant canister:aanaa-xaaaa-aaaah-aaeiq-cai
 
 ```shell
-dfx canister call xdr burn "record { canister_id= principal \"aanaa-xaaaa-aaaah-aaeiq-cai\"; amount = 1_000:nat64}"
+dfx canister call sdr burn "record { canister_id= principal \"aanaa-xaaaa-aaaah-aaeiq-cai\"; amount = 1_000:nat64}"
 
 # error invalid token contract
 ```
@@ -206,7 +206,7 @@ dfx canister call xdr burn "record { canister_id= principal \"aanaa-xaaaa-aaaah-
 Burn to user principal id
 
 ```shell
-dfx canister call xdr burn "record { canister_id= principal \"a5ygl-e4uzd-md3mh-mkbkb-7jsep-443v4-jsgv6-g3sz3-xhbpk-si7c7-kae\"; amount = 1_000:nat64}"
+dfx canister call sdr burn "record { canister_id= principal \"a5ygl-e4uzd-md3mh-mkbkb-7jsep-443v4-jsgv6-g3sz3-xhbpk-si7c7-kae\"; amount = 1_000:nat64}"
 
 # error invalid token contract
 ```
@@ -217,26 +217,26 @@ Create a canister with 1TC
 
 ```shell
 # Check personal balance before
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
 
-dfx canister --no-wallet call xdr wallet_create_canister "(record {cycles= (1_000_000_000_000:nat64); controller= (null); })"
+dfx canister --no-wallet call sdr wallet_create_canister "(record {cycles= (1_000_000_000_000:nat64); controller= (null); })"
 
 # Returns canister principal id
 
 # Balance is decremented - including the fee
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
 
 # check the newly created canister
 dfx canister --no-wallet status rkp4c-7iaaa-aaaaa-aaaca-cai
 # expect balance is as in created
-# check controller is your identity (not something else like the xdr canister)
+# check controller is your identity (not something else like the sdr canister)
 
 # check transaction
-dfx canister call xdr get_transaction "(4)"
+dfx canister call sdr get_transaction "(4)"
 # expect from and canister props
-dfx canister call xdr events "record { limit= 10: nat16 }"
+dfx canister call sdr events "record { limit= 10: nat16 }"
 
-dfx canister call xdr stats
+dfx canister call sdr stats
 # Supply should have dropped by creation amount
 # history_events increments to 2
 # fees to have an addition 2 billion
@@ -246,7 +246,7 @@ dfx canister call xdr stats
 Create a canister with more cycles than is in balance
 
 ```shell
-dfx canister --no-wallet call xdr wallet_create_canister "(record {cycles= (100_000_000_000_000:nat64); controller= (null); })"
+dfx canister --no-wallet call sdr wallet_create_canister "(record {cycles= (100_000_000_000_000:nat64); controller= (null); })"
 # expect insufficient balance
 ```
 
@@ -265,15 +265,15 @@ Proxy call with 0 additional cycles:
 
 ```shell
 # check your balance before
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
 
-dfx canister call xdr wallet_call "(record { canister= principal \"$(dfx canister id piggy-bank)\"; method_name= \"whoami\"; args= blob \"DIDL\01nh\01\00\00\"; cycles= (0:nat64); })"
+dfx canister call sdr wallet_call "(record { canister= principal \"$(dfx canister id piggy-bank)\"; method_name= \"whoami\"; args= blob \"DIDL\01nh\01\00\00\"; cycles= (0:nat64); })"
 
 # check your balance after
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
 # fee has been taken
 
-dfx canister call xdr stats
+dfx canister call sdr stats
 # no increase in the no of transactions
 # supply down by fee
 # no change in procy call counts
@@ -283,18 +283,18 @@ Proxy call with enough cycles in balance
 
 ```shell
 # check your balance before
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
 
-dfx canister call xdr wallet_call "(record { canister= principal \"$walletId\"; method_name= \"wallet_receive\"; args= blob \"DIDL\01nh\01\00\00\"; cycles= (1000:nat64); })"
+dfx canister call sdr wallet_call "(record { canister= principal \"$walletId\"; method_name= \"wallet_receive\"; args= blob \"DIDL\01nh\01\00\00\"; cycles= (1000:nat64); })"
 
 # succeeds with response
 
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
 # balance decremented by 1000 + fee (2 billion)
 
-dfx canister call xdr get_transaction "(7)"
+dfx canister call sdr get_transaction "(7)"
 # expect transaction with from, method_name, canister
-dfx canister call xdr events "record { limit= 10: nat16 }"
+dfx canister call sdr events "record { limit= 10: nat16 }"
 
 # check cycles are passed along
 dfx canister --no-wallet status $walletId
@@ -304,9 +304,9 @@ Check proxy call without enough cycles in balance:
 
 ```shell
 # check your balance before
-dfx canister call xdr balanceOf "(principal \"$principalId\")"
+dfx canister call sdr balanceOf "(principal \"$principalId\")"
 
-dfx canister call xdr wallet_call "(record { canister= principal \"$walletId\"; method_name= \"wallet_receive\"; args= blob \"DIDL\01nh\01\00\00\"; cycles= (100_000_000_000_000:nat64); })"
+dfx canister call sdr wallet_call "(record { canister= principal \"$walletId\"; method_name= \"wallet_receive\"; args= blob \"DIDL\01nh\01\00\00\"; cycles= (100_000_000_000_000:nat64); })"
 
 # (variant { Err = "Insufficient Balance" })
 ```
@@ -320,43 +320,43 @@ Transfer via an approval and claim.
 dfx identity use manual-test-1
 
 # check allowances
-dfx canister --no-wallet call xdr allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
+dfx canister --no-wallet call sdr allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
 # expect 0
 
-dfx canister --no-wallet call xdr approve "(principal \"$secondPrincipalId\", (2000:nat))"
+dfx canister --no-wallet call sdr approve "(principal \"$secondPrincipalId\", (2000:nat))"
 
 # Check updated allowance
-dfx canister --no-wallet call xdr allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
+dfx canister --no-wallet call sdr allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
 # expect 2000 + fee
 
 dfx identity use manual-test-2
 
 # attempt to transfer too much
-dfx canister --no-wallet call xdr transferFrom "(principal \"$principalId\", principal \"$secondPrincipalId\", (2001:nat))"
+dfx canister --no-wallet call sdr transferFrom "(principal \"$principalId\", principal \"$secondPrincipalId\", (2001:nat))"
 # InsufficientAllowance
 
 # actually transfer part of the allowance
-dfx canister --no-wallet call xdr transferFrom "(principal \"$principalId\", principal \"$secondPrincipalId\", (1000:nat))"
+dfx canister --no-wallet call sdr transferFrom "(principal \"$principalId\", principal \"$secondPrincipalId\", (1000:nat))"
 
 # Check updated allowance
-dfx canister --no-wallet call xdr allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
+dfx canister --no-wallet call sdr allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
 # should be 1000
 
-dfx canister --no-wallet call xdr transferFrom "(principal \"$principalId\", principal \"$secondPrincipalId\", (1000:nat))"
+dfx canister --no-wallet call sdr transferFrom "(principal \"$principalId\", principal \"$secondPrincipalId\", (1000:nat))"
 # InsufficientAllowance
 
 # Check updated allowance
-dfx canister --no-wallet call xdr allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
+dfx canister --no-wallet call sdr allowance "(principal \"$principalId\", principal \"$secondPrincipalId\")"
 # should be 1000
 
-dfx canister call xdr balanceOf "(principal \"$secondPrincipalId\")"
+dfx canister call sdr balanceOf "(principal \"$secondPrincipalId\")"
 # should be 2_000
 
-dfx canister call xdr get_transaction "(10)"
+dfx canister call sdr get_transaction "(10)"
 # Should be of the TransferFrom type
 # to/from/caller
 
-dfx canister call xdr events "record { limit= 5: nat16 }"
+dfx canister call sdr events "record { limit= 5: nat16 }"
 ```
 
 ## Transaction
@@ -364,20 +364,20 @@ dfx canister call xdr events "record { limit= 5: nat16 }"
 Lookup transaction of each type:
 
 ```shell
-dfx canister call xdr get_transaction "(5)"
+dfx canister call sdr get_transaction "(5)"
 ```
 
 Lookup transaction out of bounds:
 
 ```shell
-dfx canister call xdr get_transaction "(100)"
+dfx canister call sdr get_transaction "(100)"
 # (null)
 ```
 
 Lookup events
 
 ```shell
-dfx canister call xdr events "record { limit= 1: nat16 }"
-dfx canister call xdr events "record { offset= (opt 5); limit= 3: nat16 }"
+dfx canister call sdr events "record { limit= 1: nat16 }"
+dfx canister call sdr events "record { offset= (opt 5); limit= 3: nat16 }"
 dfx canister call rno2w-sqaaa-aaaaa-aaacq-cai events "(record { offset=120:nat64; limit= 100: nat16 })"
 ```
