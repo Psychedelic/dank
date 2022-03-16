@@ -3344,7 +3344,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xtc"
+name = "xdr"
 version = "0.1.0"
 dependencies = [
  "async-std",
@@ -3359,34 +3359,34 @@ dependencies = [
  "ledger-canister",
  "serde",
  "serde_bytes",
- "xtc-history",
- "xtc-history-common",
+ "xdr-history",
+ "xdr-history-common",
 ]
 
 [[package]]
-name = "xtc-history"
+name = "xdr-history"
 version = "0.1.0"
 dependencies = [
  "async-std",
  "ic-cdk",
  "serde",
  "serde_bytes",
- "xtc-history-common",
+ "xdr-history-common",
 ]
 
 [[package]]
-name = "xtc-history-bucket"
+name = "xdr-history-bucket"
 version = "0.1.0"
 dependencies = [
  "ic-cdk",
  "ic-cdk-macros",
  "serde",
  "serde_bytes",
- "xtc-history-common",
+ "xdr-history-common",
 ]
 
 [[package]]
-name = "xtc-history-common"
+name = "xdr-history-common"
 version = "0.1.0"
 dependencies = [
  "ic-cdk",
@@ -3394,7 +3394,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xtc-history-e2e"
+name = "xdr-history-e2e"
 version = "0.1.0"
 dependencies = [
  "async-std",
@@ -3403,8 +3403,8 @@ dependencies = [
  "ic-cdk-macros",
  "serde",
  "serde_bytes",
- "xtc-history",
- "xtc-history-common",
+ "xdr-history",
+ "xdr-history-common",
 ]
 
 [[package]]

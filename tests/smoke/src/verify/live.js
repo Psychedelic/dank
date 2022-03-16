@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { Principal } = require('@dfinity/principal');
-const setupXtc = require('../xtc/setupXtc');
+const setupXdr = require('../xdr/setupXdr');
 const { convertFromSerializableTransaction } = require('../utils/convert');
 const stringify = require('../utils/stringify');
 
@@ -96,7 +96,7 @@ const applyTransaction = (ledger, transaction) => {
   return ledger;
 };
 
-const saveBalances = async (xtc, principalIds = []) => {
+const saveBalances = async (xdr, principalIds = []) => {
   if (!fs.existsSync(SNAPSHOT_DIR)) {
     fs.mkdirSync(SNAPSHOT_DIR);
   }
@@ -112,7 +112,7 @@ const saveBalances = async (xtc, principalIds = []) => {
 
   for (const principalId of principalIds) {
     const principal = Principal.fromText(principalId);
-    const result = await xtc.balance([principal]);
+    const result = await xdr.balance([principal]);
 
     balances[principalId] = result;
 
@@ -174,7 +174,7 @@ const buildLedgerFromBackup = async () => {
 };
 
 const main = async () => {
-  const xtc = setupXtc();
+  const xdr = setupXdr();
 
   const ledger = await buildLedgerFromBackup();
 
@@ -186,7 +186,7 @@ const main = async () => {
   }
 
   console.log(`Cached balances failed match ${failed.length}, pulling latest for non-matching.`)
-  await saveBalances(xtc, failed)
+  await saveBalances(xdr, failed)
 
   console.log(
     `❌ not all balances matched expectations`,

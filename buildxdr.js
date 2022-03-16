@@ -58,3 +58,14 @@ switch (buildType)
 buildWasm('xdr-history-bucket', [...buildCommand], history_suffix, target_dir);
 buildWasm('xdr-history-e2e', [...buildCommand], history_suffix, target_dir);
 buildWasm('xdr', [...buildCommand], history_suffix, target_dir);
+
+const generateDid = () => {
+    console.log('generateDid');
+    const exec = execSync('cargo run --bin candid');
+    console.log(exec.toString());
+    console.log('DIDs generated');
+
+}
+
+
+generateDid();

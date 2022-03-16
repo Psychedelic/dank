@@ -2,16 +2,16 @@
   "version": 1,
   "dfx": "0.8.4",
   "canisters": {
-    "xtc": {
-      "build": "node build.js",
-      "candid": "candid/xtc.did",
-      "wasm": "target/wasm32-unknown-unknown/release/xtc-rel-opt.wasm",
+    "xdr": {
+      "build": "node buildxdr.js",
+      "candid": "candid/xdr.did",
+      "wasm": "target/wasm32-unknown-unknown/release/xdr-rel-opt.wasm",
       "type": "custom"
     },
-    "xtc_test": {
-      "build": "node build.js",
-      "candid": "candid/xtc.did",
-      "wasm": "target/wasm32-unknown-unknown/release/xtc-rel-opt.wasm",
+    "xdr_test": {
+      "build": "node buildxdr.js",
+      "candid": "candid/xdr.did",
+      "wasm": "target/wasm32-unknown-unknown/release/xdr-rel-opt.wasm",
       "type": "custom"
     },
     "piggy-bank": {
@@ -21,9 +21,9 @@
       "type": "custom"
     },
     "history-e2e": {
-      "build": "cargo build --target wasm32-unknown-unknown --release --package xtc-history-e2e",
-      "candid": "candid/xtc-history-e2e.did",
-      "wasm": "target/wasm32-unknown-unknown/release/xtc_history_e2e-rel-opt.wasm",
+      "build": "cargo build --target wasm32-unknown-unknown --release --package xdr-history-e2e",
+      "candid": "candid/xdr-history-e2e.did",
+      "wasm": "target/wasm32-unknown-unknown/release/xdr_history_e2e-rel-opt.wasm",
       "type": "custom"
     }
   },
