@@ -37,8 +37,9 @@ fn inspect_message() {
         let caller = ic_cdk::caller();
         let balance = ledger.balance(&caller);
 
-        // just return, don't accept message.
-        if balance < fee {
+        // accept and don't continue.
+        if balance > fee {
+            ic_cdk::api::call::accept_message();
             return;
         }
     }
